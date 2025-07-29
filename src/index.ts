@@ -15,6 +15,8 @@ const pkg = JSON.parse(
   readFileSync(resolve(__dirname, '../package.json'), 'utf-8')
 )
 
+const CONTACT_DEV_ZYU = `请联系开发者VincentZyu。加QQ群:259248174`;
+
 export const usage = `
 <h2>🎯 插件版本：v${pkg.version}</h2>
 <p>插件使用问题 / Bug反馈 / 插件开发交流，欢迎加入QQ群：<b>259248174</b></p>
@@ -251,18 +253,35 @@ export function apply(ctx: Context, config: Config) {
 
           if (config.sendText) {
             ctx.logger.info("text");
-            const formattedText = formatUserInfoForText(userInfoArg, contextInfo);
-            await session.send(`${config.enableQuoteWithText ? h.quote(session.messageId) : ''}${formattedText}`);
+            const formattedText = formatUserInfoDirectText(userInfoArg, contextInfo);
+            session.send(`${config.enableQuoteWithText ? h.quote(session.messageId) : ''}${formattedText}`);
           }
 
           if (config.sendImage){
-            const userInfoimageBase64 = await renderUserInfo(ctx, userInfoArg, contextInfo, config.imageStyle, config.enableDarkMode, config.imageType, config.screenshotQuality);
-            await session.send(`${config.enableQuoteWithImage ? h.quote(session.messageId) : ''}${h.image(`data:image/png;base64,${userInfoimageBase64}`)}`);
+            const waitTipMsgId = await session.send(`${h.quote(session.messageId)}🔄正在渲染用户信息图片，请稍候⏳...`);
+            const timeout = new Promise<string>((_, reject) => {
+              // QQ的撤回时限是120s，所以这里设置100s的timeoue
+              setTimeout(() => reject(new Error('timeout')), 100 * 1000);
+            });
+            try {
+              const userInfoimageBase64 = await Promise.race([
+                renderUserInfo(ctx, userInfoArg, contextInfo, config.imageStyle, config.enableDarkMode, config.imageType, config.screenshotQuality),
+                timeout
+              ]);
+
+              await session.send(`${config.enableQuoteWithImage ? h.quote(session.messageId) : ''}${h.image(`data:image/png;base64,${userInfoimageBase64}`)}`);
+            } catch (err) {
+              await session.send(`${h.quote(session.messageId)}❌ 渲染失败，请稍后再试。${config.verboseSessionOutput ? `\n err =  ${err}` : ''}`);
+              if ( config.verboseSessionOutput ) ctx.logger.info(`渲染用户信息图片失败。 err = ${err}`);
+            } finally {
+              // 无论成功失败都撤回提示
+              await session.bot.deleteMessage(session.guildId, String(waitTipMsgId));
+            }
           }
 
           if (config.sendForward) {
-            const forwardMessageContent = formatUserInfoForForward(userInfoArg, contextInfo);
-            await session.send(h.unescape(forwardMessageContent)); 
+            const forwardMessageContent = formatUserInfoForwardText(session.bot, userInfoArg, contextInfo);
+            session.send(h.unescape(forwardMessageContent)); 
           }
           
 
@@ -320,6 +339,17 @@ export function apply(ctx: Context, config: Config) {
             }
           }
 
+          adminListArg.sort((a, b) => {
+            // 群主优先
+            if (a.role === 'owner' && b.role !== 'owner') return -1
+            if (a.role !== 'owner' && b.role === 'owner') return 1
+
+            // 非群主之间按 card 字典序降序
+            const cardA = a.card || ''
+            const cardB = b.card || ''
+            return cardB.localeCompare(cardA, 'zh') // 支持中文拼音
+          })
+
           const contextInfo = {
             isGroup: true,
             groupId: parseInt(session.guildId),
@@ -330,17 +360,34 @@ export function apply(ctx: Context, config: Config) {
           };
 
           if (config.sendText) {
-            const formattedText = formatAdminListForText(adminListArg, contextInfo);
+            const formattedText = formatAdminListDirectText(adminListArg, contextInfo);
             await session.send(`${config.enableQuoteWithText ? h.quote(session.messageId) : ''}${formattedText}`);
           }
 
           if (config.sendImage) {
-            const adminListImageBase64 = await renderAdminList(ctx, adminListArg, contextInfo, config.imageStyle, config.enableDarkMode, config.imageType, config.screenshotQuality );
-            await session.send(`${config.enableQuoteWithImage ? h.quote(session.messageId) : ''}${h.image(`data:image/png;base64,${adminListImageBase64}`)}`);
+            const waitTipMsgId = await session.send(`${h.quote(session.messageId)}🔄正在渲染群管理员列表图片，请稍候⏳...`);
+            const timeout = new Promise<string>((_, reject) => {
+              // QQ的撤回时限是120s，所以这里设置100s的timeoue
+              setTimeout(() => reject(new Error('timeout')), 100 * 1000);
+            });
+            try {
+              const adminListImageBase64 = await Promise.race([
+                renderAdminList(ctx, adminListArg, contextInfo, config.imageStyle, config.enableDarkMode, config.imageType, config.screenshotQuality),
+                timeout
+              ]);
+
+              await session.send(`${config.enableQuoteWithImage ? h.quote(session.messageId) : ''}${h.image(`data:image/png;base64,${adminListImageBase64}`)}`);
+            } catch (err) {
+              await session.send(`${h.quote(session.messageId)}❌ 渲染失败，请稍后再试。${config.verboseSessionOutput ? `\n err =  ${err}` : ''}`);
+              if ( config.verboseSessionOutput ) ctx.logger.info(`渲染群管理员列表图片失败。 err = ${err}`);
+            } finally {
+              // 无论成功失败都撤回提示
+              await session.bot.deleteMessage(session.guildId, String(waitTipMsgId));
+            }
           }
 
           if (config.sendForward) {
-            const forwardMessageContent = formatAdminListForForward(adminListArg, contextInfo);
+            const forwardMessageContent = formatAdminListForwardText(adminListArg, contextInfo);
             await session.send(h.unescape(forwardMessageContent));
           }
 
@@ -350,23 +397,23 @@ export function apply(ctx: Context, config: Config) {
         }
       })
 
-    ctx.command("debug")
-      .action(async ({ session }) => {
+    // ctx.command("debug")
+    //   .action(async ({ session }) => {
 
-        //write debug code here (*╹▽╹*)
+    //     //write debug code here (*╹▽╹*)
 
-      });
+    //   });
 
-    function formatUserInfoForText(userInfo: any, contextInfo: any): string {
+    function formatUserInfoDirectText(userInfo: any, contextInfo: any): string {
       let output = '';
 
       // User Information
-      output += `--- 用户信息 (UserInfo) ---\n`;
+      output += `----- 用户信息 (UserInfo) -----\n`;
       output += `QQ号\t(UserID): \t\t ${userInfo.user_id}\n`;
       if (userInfo.nickname) output += `昵称\t\t(Nickname): \t ${userInfo.nickname}\n`;
       if (userInfo.card) output += `群昵称\t(GroupCard): \t ${userInfo.card}\n`;
       if (userInfo.sex) output += `性别\t\t(Gender): \t ${userInfo.sex === 'male' ? '男 (Male)' : userInfo.sex === 'female' ? '女 (Female)' : '未知 (Unknown)'}\n`;
-      if (userInfo.age) output += `年龄\t\t(Age): \t ${userInfo.age}\n`;
+      if (userInfo.age) output += `年龄\t\t(Age): \t\t ${userInfo.age}\n`;
       if (userInfo.level) output += `等级\t\t(Level): \t\t ${userInfo.level}\n`;
       if (userInfo.sign) output += `个性签名\t(Signature): \t ${userInfo.sign}\n`;
       if (userInfo.role) output += `群角色\t(GroupRole): \t ${userInfo.role === 'owner' ? '群主 (Owner)' : userInfo.role === 'admin' ? '管理员 (Admin)' : '成员 (Member)'}\n`;
@@ -382,52 +429,54 @@ export function apply(ctx: Context, config: Config) {
       return output;
     }
 
-    function formatUserInfoForForward(userInfo: any, contextInfo: any): string {
+    function formatUserInfoForwardText(botSelf: any, userInfo: any, contextInfo: any): string {
       let messages = '';
 
       // Helper to add a message block
-      const addMessageBlock = (name: string, value: string) => {
+      const addMessageBlock = (authorId: string, authorName: string, value: string) => {
         messages += `
           <message>
-            <author name="${name}"/>
+            <author ${authorId ? `id="${authorId}"` : ``} ${authorName ? `name="${authorName}"` : ``}/>
             ${value}
           </message>`;
       };
 
       // User Information
-      addMessageBlock('信息类型 (Info Type):', '用户信息 (User Info)');
-      addMessageBlock('QQ号 (User ID):', `${userInfo.user_id}`);
-      if (userInfo.nickname) addMessageBlock('昵称 (Nickname):', `${userInfo.nickname}`);
-      if (userInfo.card) addMessageBlock('群昵称 (Group Card):', `${userInfo.card}`);
-      if (userInfo.sex) addMessageBlock('性别 (Gender):', `${userInfo.sex === 'male' ? '男 (Male)' : userInfo.sex === 'female' ? '女 (Female)' : '未知 (Unknown)'}`);
-      if (userInfo.age !== undefined && userInfo.age !== null) addMessageBlock('年龄 (Age):', `${userInfo.age}`);
-      if (userInfo.level) addMessageBlock('等级 (Level):', `${userInfo.level}`);
-      if (userInfo.sign) addMessageBlock('个性签名 (Signature):', `${userInfo.sign}`);
-      if (userInfo.role) addMessageBlock('群角色 (Group Role):', `${userInfo.role === 'owner' ? '群主 (Owner)' : userInfo.role === 'admin' ? '管理员 (Admin)' : '成员 (Member)'}`);
-      if (userInfo.join_time) addMessageBlock('入群时间 (Join Time):', `${new Date(userInfo.join_time * 1000).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}`);
-      if (userInfo.RegisterTime) addMessageBlock('注册时间 (Register Time):', `${new Date(userInfo.RegisterTime).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}`);
+      addMessageBlock(undefined, '当前时间 (CurrentTime):', `${new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}`);
+      addMessageBlock(undefined, '信息类型 (InfoType):', '用户信息 (User Info)');
+      addMessageBlock(userInfo.user_id, undefined, `QQ号 (UserID):\t${userInfo.user_id}`);
+      if (userInfo.nickname) addMessageBlock(userInfo.user_id, undefined, `昵称 (Nickname):\t${userInfo.nickname}`);
+      if (userInfo.card) addMessageBlock(userInfo.user_id, undefined, `群昵称 (GroupCard):\t${userInfo.card}`);
+      if (userInfo.sex) addMessageBlock(userInfo.user_id, undefined, `性别 (Gender):\t\t${userInfo.sex === 'male' ? '男 (Male)' : userInfo.sex === 'female' ? '女 (Female)' : '未知 (Unknown)'}`);
+      if (userInfo.age !== undefined && userInfo.age !== null) addMessageBlock(userInfo.user_id, undefined, `年龄 (Age):\t${userInfo.age}`);
+      if (userInfo.level) addMessageBlock(userInfo.user_id, undefined, `等级 (Level):\t${userInfo.level}`);
+      if (userInfo.sign) addMessageBlock(userInfo.user_id, undefined, `个性签名 (Signature):\t${userInfo.sign}`);
+      if (userInfo.role) addMessageBlock(userInfo.user_id, undefined, `群角色 (GroupRole):\t\t${userInfo.role === 'owner' ? '群主 (Owner)' : userInfo.role === 'admin' ? '管理员 (Admin)' : '成员 (Member)'}`);
+      if (userInfo.join_time) addMessageBlock(userInfo.user_id, undefined, `入群时间 (JoinTime):\t${new Date(userInfo.join_time * 1000).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}`);
+      if (userInfo.RegisterTime) addMessageBlock(userInfo.user_id, undefined, `注册时间 (RegTime):\t${new Date(userInfo.RegisterTime).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}`);
 
 
       // Context Information (Group/Private Chat Specifics)
-      addMessageBlock('信息类型 (Info Type):', '会话信息 (Context Info)');
-      addMessageBlock('是否群聊 (Is Group Chat):', `${contextInfo.isGroup ? '是 (Yes)' : '否 (No)'}`);
-      if (contextInfo.isGroup && contextInfo.groupId) addMessageBlock('群号 (Group ID):', `${contextInfo.groupId}`);
+      addMessageBlock(botSelf.userId, '信息类型 (Info Type):', '会话信息 (Context Info)');
+      addMessageBlock(botSelf.userId, '是否群聊 (Is Group Chat):', `${contextInfo.isGroup ? '是 (Yes)' : '否 (No)'}`);
+      if (contextInfo.isGroup && contextInfo.groupId) addMessageBlock(botSelf.userId, '群号 (Group ID):', `${contextInfo.groupId}`);
 
       // Wrap all messages in the forward tag
       return `<message forward>\n${messages}\n</message>`;
     }
 
-    function formatAdminListForText(adminListArg: AdminInfo[], contextInfo: any): string {
+    function formatAdminListDirectText(adminListArg: AdminInfo[], contextInfo: any): string {
       let output = '';
 
-      output += `--- 群管理员列表 (Group Admin List) ---\n`;
+      output += `当前时间 (Current Time): ${new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}\n`;
+      output += `===== 群管理员列表 (Group Admin List) =====\n`;
       output += `群名称 (Group Name): ${contextInfo.groupName || '未知群聊'}\n`;
       output += `群号 (Group ID): ${contextInfo.groupId}\n`;
       output += `成员数 (Member Count): ${contextInfo.memberCount}/${contextInfo.maxMemberCount}\n`;
       output += `管理员数量 (Admin Count): ${adminListArg.length}\n\n`;
 
       adminListArg.forEach((admin, index) => {
-        output += `${index + 1}. ${admin.role === 'owner' ? '群主' : '管理员'} (${admin.role === 'owner' ? 'Owner' : 'Admin'})\n`;
+        output += `-----No. ${index + 1}. ${admin.role === 'owner' ? '群主' : '管理员'} (${admin.role === 'owner' ? 'Owner' : 'Admin'})-----\n`;
         output += `   QQ号 (User ID): ${admin.user_id}\n`;
         output += `   昵称 (Nickname): ${admin.nickname || '未知'}\n`;
         if (admin.card) output += `   群名片 (Group Card): ${admin.card}\n`;
@@ -440,16 +489,15 @@ export function apply(ctx: Context, config: Config) {
       return output;
     }
 
-    function formatAdminListForForward(adminListArg: AdminInfo[], contextInfo: any): string {
+    function formatAdminListForwardText(adminListArg: AdminInfo[], contextInfo: any): string {
         let messages = '';
 
         // Helper to add a message block with author
-        const addMessageBlock = (authorId: string, authorName: string, title: string, summary: string) => {
+        const addMessageBlock = (authorId: string, authorName: string, adminUsrInfoStr: string) => {
             messages += `
               <message>
                 <author ${authorId ? `id="${authorId}"` : ``} name="${authorName}"/>
-                -----${title}-----
-                ${summary}
+                ${adminUsrInfoStr}
               </message>`;
         };
 
@@ -457,26 +505,37 @@ export function apply(ctx: Context, config: Config) {
         addMessageBlock(
             undefined,
             '群聊基本信息',
-            '群聊概览',
-            `群号: ${contextInfo.groupId}\n成员数: ${contextInfo.memberCount}/${contextInfo.maxMemberCount}\n管理员数量: ${adminListArg.length}`
+            [
+              `当前时间: \t ${new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}`,
+              `=========群聊信息=========`,
+              `群名称: \t ${contextInfo.groupName || '未知群聊'}`,
+              `群号: \t ${contextInfo.groupId}`,
+              `成员数: \t ${contextInfo.memberCount}/${contextInfo.maxMemberCount}`,
+              `管理员数量: \t ${adminListArg.length}`
+            ].join('\n')
         );
 
         // Subsequent messages: Each admin's full information
-        for (const admin of adminListArg) {
+        // for (const admin of adminListArg) {
+        for ( let i = 0; i < adminListArg.length; i++ ) {
+            const admin = adminListArg[i];
             const authorName = admin.card || admin.nickname || `QQ: ${admin.user_id}`;
             const adminDetails = [
-                `QQ: ${admin.user_id}`,
-                `角色: ${admin.role === 'owner' ? '群主' : '管理员'}`,
-                admin.card ? `群名片: ${admin.card}` : '',
-                admin.level ? `等级: ${admin.level}` : '',
-                admin.join_time ? `入群时间: ${new Date(admin.join_time * 1000).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}` : '',
-                admin.title ? `头衔: ${admin.title}` : ''
+                `---------No. ${i+1}---------`,
+                `QQ号: \t ${admin.user_id}`,
+                `昵称: \t ${admin.nickname}`,
+                `角色: \t ${admin.role === 'owner' ? '群主' : '管理员'}`,
+                admin.card ? `群昵称: \t ${admin.card}` : '',
+                admin.level ? `等级: \t ${admin.level}` : '',
+                admin.title ? `群头衔: \t ${admin.title}` : '',
+                admin.join_time ? `加入本群时间: \t ${new Date(admin.join_time * 1000).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}` : '',
+                admin.last_sent_time ? `最后发言时间: \t ${new Date(admin.last_sent_time * 1000).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}` : '',
+                
             ].filter(Boolean).join('\n'); // Filter out empty strings and join with newline
 
             addMessageBlock(
               admin.user_id.toString(),
               authorName,
-              `${admin.nickname || admin.user_id} 的信息`,
               adminDetails
             );
         }
