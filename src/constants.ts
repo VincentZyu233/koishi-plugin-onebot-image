@@ -11,3 +11,12 @@ export const FONT_FILES = {
   [IMAGE_STYLES.SOURCE_HAN_SERIF_SC]: 'SourceHanSerifSC-Medium.otf',
   [IMAGE_STYLES.LXGW_WENKAI]: 'LXGWWenKaiMono-Regular.ttf'
 } as const;
+
+
+export const IMAGE_TYPES = {
+  PNG: 'png',
+  JPEG: 'jpeg',
+  WEBP: 'webp',
+} as const;
+
+export type ImageType = typeof IMAGE_TYPES[keyof typeof IMAGE_TYPES];

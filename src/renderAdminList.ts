@@ -1,10 +1,9 @@
 // renderAdminList.ts
 import { Context } from 'koishi';
 import { } from 'koishi-plugin-puppeteer'; // 引入 puppeteer 类型，但不直接使用 Puppeteer 类
-import { readFileSync } from 'fs';
-import { join } from 'path';
 
-import { IMAGE_STYLES, FONT_FILES, type ImageStyle } from './constants';
+import { IMAGE_STYLES, FONT_FILES, type ImageStyle, ImageType } from './constants';
+import { generateTimestamp, getGroupAvatarBase64, getFontBase64 } from './utils';
 
 export const inject = {
     required: ["puppeteer", "http"]
@@ -59,13 +58,7 @@ const getSourceHanSerifSCStyleAdminListHtmlStr = async (admins: AdminInfo[], con
         : 'background: linear-gradient(135deg, #f8f9fa, #e9ecef);';
 
     // 生成当前时间戳
-    const now = new Date();
-    const timestamp = now.getFullYear() + '/' + 
-                     String(now.getMonth() + 1).padStart(2, '0') + '/' + 
-                     String(now.getDate()).padStart(2, '0') + ' ' + 
-                     String(now.getHours()).padStart(2, '0') + ':' + 
-                     String(now.getMinutes()).padStart(2, '0') + ':' + 
-                     String(now.getSeconds()).padStart(2, '0');
+    const timestamp = generateTimestamp();
 
     return `<!DOCTYPE html>
 <html>
@@ -158,7 +151,7 @@ const getSourceHanSerifSCStyleAdminListHtmlStr = async (admins: AdminInfo[], con
         .admin-role.owner { color: #ff8c00; background: rgba(255,140,0,0.15); }
         .admin-role.admin { color: #007bff; background: rgba(0,123,255,0.1); }
 
-        .timestamp-watermark { position: fixed; bottom: 8px; right: 12px; font-size: 11px; color: rgba(128, 128, 128, 0.6); font-family: 'Courier New', monospace; z-index: 9999; pointer-events: none; text-shadow: 0 0 2px rgba(255, 255, 255, 0.8); }
+        .timestamp-watermark { position: fixed; top: 1.3px; left: 1.3px; font-size: 13px; color: rgba(128, 128, 128, 0.6); font-family: 'Courier New', monospace; z-index: 9999; pointer-events: none; text-shadow: 0 0 2px rgba(255, 255, 255, 0.8); }
 
         body.dark { color: #e0e0e0; }
         body.dark .card { background: rgba(20,20,20,0.4); box-shadow: 0 20px 60px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1), inset 0 1px 0 rgba(255,255,255,0.15); }
@@ -209,13 +202,7 @@ const getLXGWWenKaiAdminListHtmlStr = async (admins: AdminInfo[], contextInfo: C
         : `background: linear-gradient(45deg, #f5f0e6, #faf5eb);`;
 
     // 生成当前时间戳
-    const now = new Date();
-    const timestamp = now.getFullYear() + '/' + 
-                     String(now.getMonth() + 1).padStart(2, '0') + '/' + 
-                     String(now.getDate()).padStart(2, '0') + ' ' + 
-                     String(now.getHours()).padStart(2, '0') + ':' + 
-                     String(now.getMinutes()).padStart(2, '0') + ':' + 
-                     String(now.getSeconds()).padStart(2, '0');
+    const timestamp = generateTimestamp();
 
     return `<!DOCTYPE html>
 <html>
@@ -309,7 +296,7 @@ const getLXGWWenKaiAdminListHtmlStr = async (admins: AdminInfo[], contextInfo: C
 
         .admin-role { font-size: 20px; color: #8b4513; font-weight: bold; min-width: 50px; text-align: center; padding: 2px 5px; background: rgba(212,175,55,0.15); border-radius: 6px; border: 1px solid rgba(212,175,55,0.3); }
 
-        .timestamp-watermark { position: fixed; bottom: 8px; right: 12px; font-size: 11px; color: rgba(139, 69, 19, 0.4); font-family: 'Courier New', monospace; z-index: 9999; pointer-events: none; text-shadow: 0 0 2px rgba(255, 255, 255, 0.8); }
+        .timestamp-watermark { position: fixed; top: 1.3px; left: 1.3px; font-size: 13px; color: rgba(139, 69, 19, 0.4); font-family: 'Courier New', monospace; z-index: 9999; pointer-events: none; text-shadow: 0 0 2px rgba(255, 255, 255, 0.8); }
 
         body.dark { background: linear-gradient(45deg, #2c2416, #3a2f1f); color: #e6d7c3; }
         body.dark::before { border-color: #b8860b; background: linear-gradient(135deg, rgba(184,134,11,0.18) 0%, rgba(139,69,19,0.12) 50%, rgba(184,134,11,0.18) 100%); box-shadow: inset 0 0 25px rgba(184,134,11,0.45), 0 0 35px rgba(184,134,11,0.35); }
@@ -356,38 +343,15 @@ const getLXGWWenKaiAdminListHtmlStr = async (admins: AdminInfo[], contextInfo: C
 </html>`;
 };
 
-// 获取群头像的 Base64 编码
-async function getGroupAvatarBase64(ctx: Context, groupId: string): Promise<string> {
-    try {
-        const groupAvatarUrl = `https://p.qlogo.cn/gh/${groupId}/${groupId}/640/`;
-        const response = await ctx.http.get(groupAvatarUrl, { responseType: 'arraybuffer' });
-        return Buffer.from(response).toString('base64');
-    } catch (error) {
-        ctx.logger.warn(`获取群头像失败: ${error.message}`);
-        return '';
-    }
-}
-
-// 获取字体文件的 Base64 编码
-async function getFontBase64(ctx: Context, imageStyle: ImageStyle): Promise<string> {
-    try {
-        const fontFileName = FONT_FILES[imageStyle];
-        const fontPath = join(__dirname, '..', 'assets', fontFileName);
-        const fontBuffer = readFileSync(fontPath);
-        return fontBuffer.toString('base64');
-    } catch (error) {
-        ctx.logger.warn(`获取字体文件失败: ${error.message}`);
-        return '';
-    }
-}
-
 // 主渲染函数
 export async function renderAdminList(
     ctx: Context,
     admins: AdminInfo[],
     contextInfo: ContextInfo,
+    imageStyle: ImageStyle,
     enableDarkMode: boolean,
-    imageStyle: ImageStyle
+    imageType: ImageType,
+    screenshotQuality: number,
 ): Promise<string> {
     // 排序管理员列表：群主排在第一位，其余管理员按群昵称（若无则按用户名）的字典序升序排列
     admins.sort((a, b) => {
@@ -449,6 +413,7 @@ export async function renderAdminList(
 
         // 截取body元素的精确区域，避免白边
         const screenshotBuffer = await page.screenshot({
+            encoding: 'base64',
             type: 'png',
             clip: {
                 x: boundingBox.x,
@@ -460,7 +425,7 @@ export async function renderAdminList(
 
         await page.close();
 
-        return screenshotBuffer.toString('base64');
+        return screenshotBuffer;
     } catch (error) {
         ctx.logger.error(`渲染管理员列表图片失败: ${error}`);
         throw error;

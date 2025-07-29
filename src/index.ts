@@ -1,14 +1,32 @@
 // index.ts
 import { Context, Schema, h } from 'koishi'
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
 import {} from 'koishi-plugin-adapter-onebot';
 
-import { IMAGE_STYLES, type ImageStyle } from './constants';
+import { IMAGE_STYLES, type ImageStyle, IMAGE_TYPES, type ImageType } from './constants';
 import { renderUserInfo } from './renderUserInfo'; // 导入 renderUserInfo 函数
 import { renderAdminList, type AdminInfo } from './renderAdminList'; // 导入 renderAdminList 函数
+import { group } from 'console';
 
 export const name = 'onebot-info-image'
 
+const pkg = JSON.parse(
+  readFileSync(resolve(__dirname, '../package.json'), 'utf-8')
+)
+
 export const usage = `
+<h2>🎯 插件版本：v${pkg.version}</h2>
+<p>插件使用问题 / Bug反馈 / 插件开发交流，欢迎加入QQ群：<b>259248174</b></p>
+
+<hr>
+
+<p>📦 插件仓库地址：</p>
+<ul>
+  <li><a href="https://gitee.com/vincent-zyu/koishi-plugin-onebot-image">Gitee</a></li>
+  <li><a href="https://github.com/VincentZyu233/koishi-plugin-onebot-image">GitHub</a></li>
+</ul>
+
 <hr>
 
 <h3>字体使用声明</h3>
@@ -19,18 +37,20 @@ export const usage = `
 </ul>
 <p>两者均为自由字体，可在本项目中自由使用、修改与发布。若你也在开发相关插件或项目，欢迎一同使用这些优秀的字体。</p>
 
----
+<hr>
 
 <h3>插件许可声明</h3>
 <p>本插件为开源免费项目，基于 MIT 协议开放。欢迎修改、分发、二创。</p>
 <p>如果你觉得插件好用，欢迎在 GitHub 上 Star 或通过其他方式给予支持（例如提供服务器、API Key 或直接赞助）！</p>
 <p>感谢所有开源字体与项目的贡献者 ❤️</p>
-`;
+`
 
 
 export interface Config {
   enableUserInfoCommand: boolean;
+  userinfoCommandName: string;
   enableGroupAdminListCommand: boolean;
+  groupAdminListCommandName: string;
 
   sendText: boolean;
   enableQuoteWithText: boolean;
@@ -39,6 +59,7 @@ export interface Config {
   enableQuoteWithImage: boolean
   imageStyle: ImageStyle;
   enableDarkMode: boolean;
+  imageType: ImageType;
   screenshotQuality: number;
 
   sendForward: boolean
@@ -46,64 +67,78 @@ export interface Config {
   verboseSessionOutput: boolean
   verboseConsoleOutput: boolean
 }
-
 export const Config: Schema<Config> = Schema.intersect([
 
   Schema.object({
     enableUserInfoCommand: Schema.boolean()
       .default(true)
-      .description('是否启用用户信息命令。'),
+      .description('ℹ️ 是否启用用户信息命令。'),
+    userinfoCommandName: Schema.string()
+      .default('用户信息')
+      .description('🔍 用户信息命令名称。'),
     enableGroupAdminListCommand: Schema.boolean()
       .default(false)
-      .description('是否启用群管理员列表命令。'),
-  }).description('基础配置'),
+      .description('👥 是否启用群管理员列表命令。'),
+    groupAdminListCommandName: Schema.string()
+      .default('群管理列表')
+      .description('👥 群管理员列表命令名称。'),
+  }).description('基础配置 ⚙️'),
 
   Schema.object({
     sendText: Schema.boolean()
       .default(false)
-      .description('是否 启用文本回复。'),
+      .description('💬 是否启用文本回复。'),
     enableQuoteWithText: Schema.boolean()
       .default(false)
-      .description('回复文本的时候，是否带引用触发指令的消息'),
-  }).description('发送 文本 配置'),
+      .description('↩️ 回复文本的时候，是否带引用触发指令的消息。'),
+  }).description('发送 文本 配置 📝'),
 
   Schema.object({
     sendImage: Schema.boolean()
       .default(true)
-      .description('是否启用 Puppeteer 渲染图片。'),
+      .description('🖼️ 是否启用 Puppeteer 渲染图片。'),
     enableQuoteWithImage: Schema.boolean()
       .default(false)
-      .description('回复图片的时候，是否带引用触发指令的消息'),
+      .description('📸 回复图片的时候，是否带引用触发指令的消息。'),
     imageStyle: Schema.union([
-      Schema.const(IMAGE_STYLES.SOURCE_HAN_SERIF_SC).description('现代风格，使用SourceHanSerifSC 思源宋体'),
-      Schema.const(IMAGE_STYLES.LXGW_WENKAI).description('简洁古风，使用LXGWWenKai 字体'),
+      Schema.const(IMAGE_STYLES.SOURCE_HAN_SERIF_SC).description('✨ 现代风格，使用SourceHanSerifSC 思源宋体'),
+      Schema.const(IMAGE_STYLES.LXGW_WENKAI).description('📜 简洁古风，使用LXGWWenKai 字体'),
     ])
       .role('radio')
       .default(IMAGE_STYLES.SOURCE_HAN_SERIF_SC)
-      .description("渲染图片的风格+字体"),
+      .description("🎨 渲染图片的风格与字体。"),
+    enableDarkMode: Schema.boolean()
+      .default(false)
+      .description('🌙 是否启用暗黑模式。'),
+    imageType: Schema.union([
+      Schema.const(IMAGE_TYPES.PNG).description(`🖼️ ${IMAGE_TYPES.PNG}, ❌ 不支持调整quality`),
+      Schema.const(IMAGE_TYPES.JPEG).description(`🌄 ${IMAGE_TYPES.JPEG}, ✅ 支持调整quality`),
+      Schema.const(IMAGE_TYPES.WEBP).description(`🌐 ${IMAGE_TYPES.WEBP}, ✅ 支持调整quality`),
+    ])
+      .role('radio')
+      .default(IMAGE_TYPES.PNG)
+      .description("📤 渲染图片的输出类型。"),
     screenshotQuality: Schema.number()
       .min(0).max(100).step(1)
       .default(80)
-      .description('Puppeteer 截图质量 (0-100)。'),
-    enableDarkMode: Schema.boolean()
-      .default(false)
-      .description('是否启用暗黑模式。')
-  }).description('发送 Puppeteer渲染的图片 配置'),
+      .description('📏 Puppeteer 截图质量 (0-100)。'),
+
+  }).description('发送 Puppeteer渲染的图片 配置 🎨'),
 
   Schema.object({
     sendForward: Schema.boolean()
       .default(false)
-      .description('是否 启用转发消息。')
-  }).description('发送 onebot转发消息 配置'),
+      .description('➡️ 是否启用转发消息。'),
+  }).description('发送 onebot转发消息 配置 ✉️'),
 
   Schema.object({
     verboseSessionOutput: Schema.boolean()
       .default(false)
-      .description('是否在会话中输出详细信息。'),
+      .description('🗣️ 是否在会话中输出详细信息。'),
     verboseConsoleOutput: Schema.boolean()
       .default(false)
-      .description('是否在控制台输出详细信息。')
-  }).description('debug 配置')
+      .description('💻 是否在控制台输出详细信息。'),
+  }).description('调试 (Debug) 配置 🐞')
 
 ]);
 
@@ -121,7 +156,8 @@ export function apply(ctx: Context, config: Config) {
   ].filter(Boolean).join('、');
 
   if ( config.enableUserInfoCommand ) 
-    ctx.command('aui', `获取用户信息, 发送${responseHint}`)
+    ctx.command(config.userinfoCommandName, `获取用户信息, 发送${responseHint}`)
+      .alias('aui')
       .alias("awa_user_info")
       .action( async ( {session} ) => {
         if ( !session.onebot )
@@ -216,12 +252,12 @@ export function apply(ctx: Context, config: Config) {
           if (config.sendText) {
             ctx.logger.info("text");
             const formattedText = formatUserInfoForText(userInfoArg, contextInfo);
-            await session.send(formattedText);
+            await session.send(`${config.enableQuoteWithText ? h.quote(session.messageId) : ''}${formattedText}`);
           }
 
           if (config.sendImage){
-            const userInfoimageBase64 = await renderUserInfo(ctx, userInfoArg, contextInfo, config.enableDarkMode, config.imageStyle);
-            await session.send(h.image(`data:image/png;base64,${userInfoimageBase64}`));
+            const userInfoimageBase64 = await renderUserInfo(ctx, userInfoArg, contextInfo, config.imageStyle, config.enableDarkMode, config.imageType, config.screenshotQuality);
+            await session.send(`${config.enableQuoteWithImage ? h.quote(session.messageId) : ''}${h.image(`data:image/png;base64,${userInfoimageBase64}`)}`);
           }
 
           if (config.sendForward) {
@@ -238,7 +274,8 @@ export function apply(ctx: Context, config: Config) {
       })
     
   if ( config.enableGroupAdminListCommand )
-    ctx.command('al', `获取群管理员列表, 发送${responseHint}`)
+    ctx.command(config.groupAdminListCommandName, `获取群管理员列表, 发送${responseHint}`)
+      .alias('al')
       .alias("awa_group_admin_list")
       .action( async ( {session, options} ) => {
         if ( !session.onebot )
@@ -261,13 +298,13 @@ export function apply(ctx: Context, config: Config) {
           }
 
           // 获取管理员头像并转换为 AdminInfo 格式
-          const admins: AdminInfo[] = [];
+          const adminListArg: AdminInfo[] = [];
           for (const member of groupAdminMemberListObj) {
             try {
               // @ts-ignore - getGroupMemberList()返回的数组里面，每一个member对象 实际包含 user_id 字段，但类型定义中缺失 (here ↓)
               // node_modules/koishi-plugin-adapter-onebot/lib/types.d.ts:  export interface GroupMemberInfo extends SenderInfo
               const userObj = await session.bot.getUser(member.user_id);
-              admins.push({
+              adminListArg.push({
                 user_id: member.user_id,
                 nickname: member.nickname,
                 card: member.card,
@@ -293,17 +330,17 @@ export function apply(ctx: Context, config: Config) {
           };
 
           if (config.sendText) {
-            const formattedText = formatAdminListForText(admins, contextInfo);
-            await session.send(formattedText);
+            const formattedText = formatAdminListForText(adminListArg, contextInfo);
+            await session.send(`${config.enableQuoteWithText ? h.quote(session.messageId) : ''}${formattedText}`);
           }
 
           if (config.sendImage) {
-            const adminListImageBase64 = await renderAdminList(ctx, admins, contextInfo, config.enableDarkMode, config.imageStyle);
-            await session.send(h.image(`data:image/png;base64,${adminListImageBase64}`));
+            const adminListImageBase64 = await renderAdminList(ctx, adminListArg, contextInfo, config.imageStyle, config.enableDarkMode, config.imageType, config.screenshotQuality );
+            await session.send(`${config.enableQuoteWithImage ? h.quote(session.messageId) : ''}${h.image(`data:image/png;base64,${adminListImageBase64}`)}`);
           }
 
           if (config.sendForward) {
-            const forwardMessageContent = formatAdminListForForward(admins, contextInfo);
+            const forwardMessageContent = formatAdminListForForward(adminListArg, contextInfo);
             await session.send(h.unescape(forwardMessageContent));
           }
 
@@ -317,11 +354,6 @@ export function apply(ctx: Context, config: Config) {
       .action(async ({ session }) => {
 
         //write debug code here (*╹▽╹*)
-
-        const groupInfoObj = await session.onebot.getGroupInfo(session.guildId);
-        let groupInfoObjMsg = `groupInfoObj = \n\t ${JSON.stringify(groupInfoObj)}`;
-        if ( config.verboseSessionOutput ) await session.send(groupInfoObjMsg);
-        if ( config.verboseConsoleOutput ) ctx.logger.info(groupInfoObjMsg);
 
       });
 
@@ -385,16 +417,16 @@ export function apply(ctx: Context, config: Config) {
       return `<message forward>\n${messages}\n</message>`;
     }
 
-    function formatAdminListForText(admins: AdminInfo[], contextInfo: any): string {
+    function formatAdminListForText(adminListArg: AdminInfo[], contextInfo: any): string {
       let output = '';
 
       output += `--- 群管理员列表 (Group Admin List) ---\n`;
       output += `群名称 (Group Name): ${contextInfo.groupName || '未知群聊'}\n`;
       output += `群号 (Group ID): ${contextInfo.groupId}\n`;
       output += `成员数 (Member Count): ${contextInfo.memberCount}/${contextInfo.maxMemberCount}\n`;
-      output += `管理员数量 (Admin Count): ${admins.length}\n\n`;
+      output += `管理员数量 (Admin Count): ${adminListArg.length}\n\n`;
 
-      admins.forEach((admin, index) => {
+      adminListArg.forEach((admin, index) => {
         output += `${index + 1}. ${admin.role === 'owner' ? '群主' : '管理员'} (${admin.role === 'owner' ? 'Owner' : 'Admin'})\n`;
         output += `   QQ号 (User ID): ${admin.user_id}\n`;
         output += `   昵称 (Nickname): ${admin.nickname || '未知'}\n`;
@@ -408,7 +440,7 @@ export function apply(ctx: Context, config: Config) {
       return output;
     }
 
-    function formatAdminListForForward(admins: AdminInfo[], contextInfo: any): string {
+    function formatAdminListForForward(adminListArg: AdminInfo[], contextInfo: any): string {
         let messages = '';
 
         // Helper to add a message block with author
@@ -426,11 +458,11 @@ export function apply(ctx: Context, config: Config) {
             undefined,
             '群聊基本信息',
             '群聊概览',
-            `群号: ${contextInfo.groupId}\n成员数: ${contextInfo.memberCount}/${contextInfo.maxMemberCount}\n管理员数量: ${admins.length}`
+            `群号: ${contextInfo.groupId}\n成员数: ${contextInfo.memberCount}/${contextInfo.maxMemberCount}\n管理员数量: ${adminListArg.length}`
         );
 
         // Subsequent messages: Each admin's full information
-        for (const admin of admins) {
+        for (const admin of adminListArg) {
             const authorName = admin.card || admin.nickname || `QQ: ${admin.user_id}`;
             const adminDetails = [
                 `QQ: ${admin.user_id}`,

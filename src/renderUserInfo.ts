@@ -2,7 +2,10 @@
 import { Context } from 'koishi';
 import { } from 'koishi-plugin-puppeteer'; // 引入 puppeteer 类型，但不直接使用 Puppeteer 类
 
-import { IMAGE_STYLES, FONT_FILES, type ImageStyle } from './constants';
+import { IMAGE_STYLES, FONT_FILES, type ImageStyle, ImageType } from './constants';
+import { generateTimestamp, getGroupAvatarBase64, getFontBase64 } from './utils';
+import { ContextInfo } from './renderAdminList';
+import { GroupMemberInfo } from 'koishi-plugin-adapter-onebot/lib/types';
 
 export const inject = {
     required: ["puppeteer", "http"]
@@ -15,13 +18,7 @@ const getSourceHanSerifSCStyleUserInfoHtmlStr = async (userInfo, contextInfo, av
         : `background-color: #f0f2f5;`; // 提供一个 fallback 背景色
 
     // 生成当前时间戳
-    const now = new Date();
-    const timestamp = now.getFullYear() + '/' + 
-                     String(now.getMonth() + 1).padStart(2, '0') + '/' + 
-                     String(now.getDate()).padStart(2, '0') + ' ' + 
-                     String(now.getHours()).padStart(2, '0') + ':' + 
-                     String(now.getMinutes()).padStart(2, '0') + ':' + 
-                     String(now.getSeconds()).padStart(2, '0');
+    const timestamp = generateTimestamp();
 
         
     // 根据是否为群聊生成不同的信息项
@@ -207,8 +204,8 @@ const getSourceHanSerifSCStyleUserInfoHtmlStr = async (userInfo, contextInfo, av
                 0 0 0 1px rgba(255, 255, 255, 0.25), /* 更透明的边框 */
                 inset 0 2px 0 rgba(255, 255, 255, 0.4); /* 更透明的内阴影 */
             padding: 40px;
-            width: 920px; /* 固定宽度，四周留约40px空隙 */
-            height: 920px; /* 固定高度，四周留约40px空隙 */
+            width: 920px;   /* 固定宽度，四周留约40px空隙 */
+            height: 920px;  /* 固定高度，四周留约40px空隙 */
             box-sizing: border-box;
             border: 1px solid rgba(255, 255, 255, 0.3); /* 更透明的边框 */
             color: #212121;
@@ -438,9 +435,9 @@ const getSourceHanSerifSCStyleUserInfoHtmlStr = async (userInfo, contextInfo, av
         
         .timestamp-watermark {
             position: fixed;
-            bottom: 8px;
-            right: 12px;
-            font-size: 11px;
+            top: 1.3px;
+            left: 1.3px;
+            font-size: 13px;
             color: rgba(128, 128, 128, 0.6);
             font-family: 'Courier New', monospace;
             z-index: 9999;
@@ -588,13 +585,7 @@ const getLXGWWenKaiUserInfoHtmlStr = async (userInfo, contextInfo, avatarBase64:
         : `background: linear-gradient(45deg, #f5f0e6, #faf5eb);`;
 
     // 生成当前时间戳
-    const now = new Date();
-    const timestamp = now.getFullYear() + '/' + 
-                     String(now.getMonth() + 1).padStart(2, '0') + '/' + 
-                     String(now.getDate()).padStart(2, '0') + ' ' + 
-                     String(now.getHours()).padStart(2, '0') + ':' + 
-                     String(now.getMinutes()).padStart(2, '0') + ':' + 
-                     String(now.getSeconds()).padStart(2, '0');
+    const timestamp = generateTimestamp();
 
     return `<!DOCTYPE html>
 <html>
@@ -867,9 +858,9 @@ const getLXGWWenKaiUserInfoHtmlStr = async (userInfo, contextInfo, avatarBase64:
         
         .timestamp-watermark {
             position: fixed;
-            bottom: 8px;
-            right: 12px;
-            font-size: 11px;
+            top: 1.3px;
+            left: 1.3px;
+            font-size: 13px;
             color: rgba(139, 69, 19, 0.5);
             font-family: 'Courier New', monospace;
             z-index: 9999;
@@ -1075,10 +1066,12 @@ const getLXGWWenKaiUserInfoHtmlStr = async (userInfo, contextInfo, avatarBase64:
  */
 export async function renderUserInfo(
     ctx: Context, 
-    userInfo, 
-    contextInfo, 
-    enableDarkMode, 
-    imageStyle
+    userInfo: GroupMemberInfo, 
+    contextInfo: ContextInfo, 
+    imageStyle: ImageStyle,
+    enableDarkMode: boolean, 
+    imageType: ImageType,
+    screenshotQuality: number,
 ): Promise<string> {
     const browserPage = await ctx.puppeteer.page();
     let avatarBase64: string | undefined;
@@ -1086,40 +1079,26 @@ export async function renderUserInfo(
     let fontBase64: string | undefined;
 
     try {
-        // 读取字体文件并转换为base64
-        try {
-            const fs = require('fs');
-            const path = require('path');
-            const fontFileName = FONT_FILES[imageStyle];
-            // const fontPath = path.join(__dirname, '../assets/SourceHanSerifSC-Medium.otf');
-            const fontPath = path.join(__dirname, '../assets', fontFileName);
-            const fontBuffer = fs.readFileSync(fontPath);
-            fontBase64 = fontBuffer.toString('base64');
-        } catch (error) {
-            ctx.logger.warn(`Failed to load font file: ${error.message}`);
-            fontBase64 = undefined;
-        }
+        // 获取字体文件
+        fontBase64 = await getFontBase64(ctx, imageStyle);
 
-        // 获取用户头像
+        // 获取用户头像， 这三个ignore是因为 OneBot GroupMemberInfo 对象没有定义avatar字段，但是实际拿到的是有的
+        // @ts-ignore
         if (userInfo.avatar) {
             try {
+                // @ts-ignore
                 const avatarBuffer = await ctx.http.file(userInfo.avatar);
                 avatarBase64 = Buffer.from(avatarBuffer.data).toString('base64');
             } catch (error) {
+                // @ts-ignore
                 ctx.logger.warn(`Failed to fetch user avatar from ${userInfo.avatar}: ${error.message}`);
                 avatarBase64 = undefined; // 获取失败则不使用头像
             }
         }
 
         // 获取群头像（如果是群聊）
-        if (contextInfo.isGroup && contextInfo.groupAvatarUrl) {
-            try {
-                const groupAvatarBuffer = await ctx.http.file(contextInfo.groupAvatarUrl);
-                groupAvatarBase64 = Buffer.from(groupAvatarBuffer.data).toString('base64');
-            } catch (error) {
-                ctx.logger.warn(`Failed to fetch group avatar from ${contextInfo.groupAvatarUrl}: ${error.message}`);
-                groupAvatarBase64 = undefined;
-            }
+        if (contextInfo.isGroup && contextInfo.groupId) {
+            groupAvatarBase64 = await getGroupAvatarBase64(ctx, contextInfo.groupId.toString());
         }
 
         // 如果头像获取失败，可以使用一个默认的头像 base64
@@ -1130,9 +1109,9 @@ export async function renderUserInfo(
         // const htmlContent = await getSourceHanSerifSCStyleUserInfoHtmlStr(userInfo, contextInfo, avatarBase64 || '', groupAvatarBase64 || '', fontBase64 || '', enableDarkMode);
         let htmlContent;
         if ( imageStyle === IMAGE_STYLES.SOURCE_HAN_SERIF_SC ) {
-            htmlContent = await getSourceHanSerifSCStyleUserInfoHtmlStr(userInfo, contextInfo, avatarBase64 || '', groupAvatarBase64 || '', fontBase64 || '', enableDarkMode);
+            htmlContent = await getSourceHanSerifSCStyleUserInfoHtmlStr (userInfo, contextInfo, avatarBase64 || '', groupAvatarBase64 || '', fontBase64 || '', enableDarkMode);
         } else if ( imageStyle === IMAGE_STYLES.LXGW_WENKAI ) {
-            htmlContent = await getLXGWWenKaiUserInfoHtmlStr(userInfo, contextInfo, avatarBase64 || '', groupAvatarBase64 || '', fontBase64 || '', enableDarkMode);
+            htmlContent = await getLXGWWenKaiUserInfoHtmlStr            (userInfo, contextInfo, avatarBase64 || '', groupAvatarBase64 || '', fontBase64 || '', enableDarkMode);
         }
 
         // 设置页面视口为999x999
@@ -1159,7 +1138,9 @@ export async function renderUserInfo(
         // 截图指定尺寸的区域，确保是正方形
         const screenshotBuffer = await browserPage.screenshot({
             encoding: 'base64',
-            type: 'png',
+            type: imageType,
+            // quality: screenshotQuality,
+            ...(imageType !== 'png' && { quality: screenshotQuality }),
             clip: {
                 x: 0,
                 y: 0,
