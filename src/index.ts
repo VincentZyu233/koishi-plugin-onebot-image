@@ -258,25 +258,10 @@ export function apply(ctx: Context, config: Config) {
           }
 
           if (config.sendImage){
-            const waitTipMsgId = await session.send(`${h.quote(session.messageId)}🔄正在渲染用户信息图片，请稍候⏳...`);
-            const timeout = new Promise<string>((_, reject) => {
-              // QQ的撤回时限是120s，所以这里设置100s的timeoue
-              setTimeout(() => reject(new Error('timeout')), 100 * 1000);
-            });
-            try {
-              const userInfoimageBase64 = await Promise.race([
-                renderUserInfo(ctx, userInfoArg, contextInfo, config.imageStyle, config.enableDarkMode, config.imageType, config.screenshotQuality),
-                timeout
-              ]);
-
-              await session.send(`${config.enableQuoteWithImage ? h.quote(session.messageId) : ''}${h.image(`data:image/png;base64,${userInfoimageBase64}`)}`);
-            } catch (err) {
-              await session.send(`${h.quote(session.messageId)}❌ 渲染失败，请稍后再试。${config.verboseSessionOutput ? `\n err =  ${err}` : ''}`);
-              if ( config.verboseSessionOutput ) ctx.logger.info(`渲染用户信息图片失败。 err = ${err}`);
-            } finally {
-              // 无论成功失败都撤回提示
-              await session.bot.deleteMessage(session.guildId, String(waitTipMsgId));
-            }
+            const waitTipMsgId = await session.send(`${h.quote(session.messageId)}qwq🔄正在渲染用户信息图片，请稍候⏳...`);
+            const userInfoimageBase64 = await renderUserInfo(ctx, userInfoArg, contextInfo, config.imageStyle, config.enableDarkMode, config.imageType, config.screenshotQuality);
+            await session.send(`${config.enableQuoteWithImage ? h.quote(session.messageId) : ''}${h.image(`data:image/png;base64,${userInfoimageBase64}`)}`);
+            await session.bot.deleteMessage(session.guildId, String(waitTipMsgId));
           }
 
           if (config.sendForward) {
@@ -366,24 +351,9 @@ export function apply(ctx: Context, config: Config) {
 
           if (config.sendImage) {
             const waitTipMsgId = await session.send(`${h.quote(session.messageId)}🔄正在渲染群管理员列表图片，请稍候⏳...`);
-            const timeout = new Promise<string>((_, reject) => {
-              // QQ的撤回时限是120s，所以这里设置100s的timeoue
-              setTimeout(() => reject(new Error('timeout')), 100 * 1000);
-            });
-            try {
-              const adminListImageBase64 = await Promise.race([
-                renderAdminList(ctx, adminListArg, contextInfo, config.imageStyle, config.enableDarkMode, config.imageType, config.screenshotQuality),
-                timeout
-              ]);
-
-              await session.send(`${config.enableQuoteWithImage ? h.quote(session.messageId) : ''}${h.image(`data:image/png;base64,${adminListImageBase64}`)}`);
-            } catch (err) {
-              await session.send(`${h.quote(session.messageId)}❌ 渲染失败，请稍后再试。${config.verboseSessionOutput ? `\n err =  ${err}` : ''}`);
-              if ( config.verboseSessionOutput ) ctx.logger.info(`渲染群管理员列表图片失败。 err = ${err}`);
-            } finally {
-              // 无论成功失败都撤回提示
-              await session.bot.deleteMessage(session.guildId, String(waitTipMsgId));
-            }
+            const adminListImageBase64 = await renderAdminList(ctx, adminListArg, contextInfo, config.imageStyle, config.enableDarkMode, config.imageType, config.screenshotQuality);
+            await session.send(`${config.enableQuoteWithImage ? h.quote(session.messageId) : ''}${h.image(`data:image/png;base64,${adminListImageBase64}`)}`);
+            await session.bot.deleteMessage(session.guildId, String(waitTipMsgId));
           }
 
           if (config.sendForward) {

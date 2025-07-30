@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-onebot-info-image",
-  "description": "用onebotapi获取用户详细信息，可以发纯文本/合并转发/渲染图片",
-  "version": "0.0.1-alpha.2+20250730",
+  "description": "用onebot api获取用户详细信息/群管理员列表信息，可以发纯文本/合并转发/渲染图片",
+  "version": "0.0.1-alpha.3+20250731",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
@@ -22,5 +22,16 @@
   ],
   "peerDependencies": {
     "koishi": "^4.18.7"
+  },
+  "koishi": {
+    "description": {
+      "en": "Fetch detailed user info / group admin list using OneBot API, and send plain text / merged forward messages / rendered images.",
+      "zh": "用onebot api获取用户详细信息/群管理员列表信息，可以发纯文本/合并转发/渲染图片"
+    },
+    "service": {
+      "required": [
+        "database"
+      ]
+    }
   }
 }
