@@ -1121,7 +1121,13 @@ export async function renderUserInfo(
             deviceScaleFactor: 1,
         });
 
-        await browserPage.setContent(htmlContent, { waitUntil: 'networkidle0' });
+        // await browserPage.setContent(htmlContent, { waitUntil: 'networkidle0' });
+
+        // 修改1: 改用更宽松的等待策略，类似renderAdminList
+        await browserPage.setContent(htmlContent);
+        
+        // 修改2: 使用超时等待DOM加载，而不是网络空闲
+        await browserPage.waitForSelector('body', { timeout: 10000 });
 
         // 等待图片加载完成（如果 avatar 是远程图片）
         await browserPage.evaluate(async () => {
