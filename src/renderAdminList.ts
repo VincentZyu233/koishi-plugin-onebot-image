@@ -34,7 +34,7 @@ const generateAdminListItems = (admins: AdminInfo[]) => {
     return admins.map((admin, index) => `
         <div class="admin-item">
           <div class="admin-column-1">
-            <div class="admin-number">${index + 1}</div>
+            <div class="admin-number">${(index + 1).toString().padStart(2, '0')}</div>
             <div class="admin-avatar">
               <img src="${admin.avatar || `https://q1.qlogo.cn/g?b=qq&nk=${admin.user_id}&s=640`}" alt="头像" />
             </div>
@@ -119,35 +119,35 @@ const getSourceHanSerifSCStyleAdminListHtmlStr = async (admins: AdminInfo[], con
 
         .admin-item:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); background: rgba(255,255,255,0.7); }
 
-        .admin-column-1 { display: flex; flex-direction: row; align-items: center; margin-right: 15px; min-width: 60px; }
+        .admin-column-1 { display: flex; flex-direction: row; align-items: center; margin-right: 15px; min-width: 60px; text-align: left; }
 
         .admin-avatar { margin-bottom: 4px; }
 
         .admin-avatar img { width: 90px; height: 90px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.8); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 
-        .admin-number { font-size: 25px; margin: 0 10px 0 0; font-weight: 700; color: #666; text-align: center; }
+        .admin-number { font-size: 25px; margin: 0 10px 0 0; font-weight: 700; color: #666; text-align: left; }
 
-        .admin-column-2 { flex: 1; margin-right: 16px; }
+        .admin-column-2 { flex: 1; margin-right: 16px; text-align: left; }
 
-        .admin-name { font-size: 20px; color: #1a1a1a; font-weight: 600; margin-bottom: 4px; }
+        .admin-name { font-size: 20px; color: #1a1a1a; font-weight: 600; margin-bottom: 4px; text-align: left; }
 
-        .admin-id { font-size: 15px; margin-bottom: 2px; }
+        .admin-id { font-size: 15px; margin-bottom: 2px; text-align: left; }
 
         .qq-label { color: #666; font-weight: 500; }
 
         .qq-number { color: #1a1a1a; font-weight: 600; font-family: 'Courier New', monospace; }
 
-        .admin-column-3 { flex: 1; margin-right: 16px; }
+        .admin-column-3 { flex: 1; margin-right: 16px; text-align: left; }
 
-        .admin-card { font-size: 20px; line-height: 1.3; }
+        .admin-card { font-size: 20px; line-height: 1.3; text-align: left; }
 
         .card-label { color: #666; font-weight: 500; font-size: 18px; }
 
         .card-content { color: #1a1a1a; font-weight: 600; font-size: 20px; }
 
-        .admin-card-empty { font-size: 20px; color: #999; font-style: italic; }
+        .admin-card-empty { font-size: 20px; color: #999; font-style: italic; text-align: left; }
 
-        .admin-role { font-size: 20px; font-weight: 700; min-width: 60px; text-align: center; padding: 3px 6px; border-radius: 8px; }
+        .admin-role { font-size: 20px; font-weight: 700; min-width: 60px; text-align: left; padding: 3px 6px; border-radius: 8px; }
         .admin-role.owner { color: #ff8c00; background: rgba(255,140,0,0.15); }
         .admin-role.admin { color: #007bff; background: rgba(0,123,255,0.1); }
 
@@ -266,35 +266,35 @@ const getLXGWWenKaiAdminListHtmlStr = async (admins: AdminInfo[], contextInfo: C
 
         .admin-item:hover { transform: translateY(-1px); box-shadow: 0 5px 18px rgba(212,175,55,0.25); background: rgba(255,255,255,0.3); }
 
-        .admin-column-1 { display: flex; flex-direction: row; align-items: center; margin-right: 14px; min-width: 55px; }
+        .admin-column-1 { display: flex; flex-direction: row; align-items: center; margin-right: 14px; min-width: 55px; text-align: left; }
 
         .admin-avatar { margin-bottom: 4px; }
 
         .admin-avatar img { width: 75px; height: 75px; border-radius: 50%; border: 2px solid #d4af37; box-shadow: 0 2px 6px rgba(212,175,55,0.2); }
 
-        .admin-number { font-size: 36px; margin: 5px 15px 5px 5px; font-weight: bold; color: #8b4513; text-align: center; }
+        .admin-number { font-size: 36px; margin: 5px 15px 5px 5px; font-weight: bold; color: #8b4513; text-align: left; }
 
-        .admin-column-2 { flex: 1; margin-right: 10px; }
+        .admin-column-2 { flex: 1; margin-right: 10px; text-align: left; }
 
-        .admin-name { font-size: 18px; color: #3a2f2a; font-weight: bold; margin-bottom: 3px; }
+        .admin-name { font-size: 18px; color: #3a2f2a; font-weight: bold; margin-bottom: 3px; text-align: left; }
 
-        .admin-id { font-size: 15px; margin-bottom: 2px; }
+        .admin-id { font-size: 15px; margin-bottom: 2px; text-align: left; }
 
         .qq-label { color: #a0522d; font-weight: 500; }
 
         .qq-number { color: #3a2f2a; font-weight: bold; font-family: 'Courier New', monospace; }
 
-        .admin-column-3 { flex: 1; margin-right: 10px; }
+        .admin-column-3 { flex: 1; margin-right: 10px; text-align: left; }
 
-        .admin-card { font-size: 15px; line-height: 1.3; }
+        .admin-card { font-size: 15px; line-height: 1.3; text-align: left; }
 
         .card-label { color: #a0522d; font-weight: 500; font-size: 13px; }
 
         .card-content { color: #3a2f2a; font-weight: bold; font-size: 15px; }
 
-        .admin-card-empty { font-size: 15px; color: #8b7355; font-style: italic; }
+        .admin-card-empty { font-size: 15px; color: #8b7355; font-style: italic; text-align: left; }
 
-        .admin-role { font-size: 20px; color: #8b4513; font-weight: bold; min-width: 50px; text-align: center; padding: 2px 5px; background: rgba(212,175,55,0.15); border-radius: 6px; border: 1px solid rgba(212,175,55,0.3); }
+        .admin-role { font-size: 20px; color: #8b4513; font-weight: bold; min-width: 50px; text-align: left; padding: 2px 5px; background: rgba(212,175,55,0.15); border-radius: 6px; border: 1px solid rgba(212,175,55,0.3); }
 
         .timestamp-watermark { position: fixed; top: 1.3px; left: 1.3px; font-size: 13px; color: rgba(139, 69, 19, 0.4); font-family: 'Courier New', monospace; z-index: 9999; pointer-events: none; text-shadow: 0 0 2px rgba(255, 255, 255, 0.8); }
 

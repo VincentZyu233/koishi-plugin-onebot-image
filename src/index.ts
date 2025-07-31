@@ -183,7 +183,9 @@ export function apply(ctx: Context, config: Config) {
         let contextInfo = {
           isGroup: false,
           groupId: null,
-          groupAvatarUrl: null
+          groupAvatarUrl: null,
+          memberCount: null,
+          maxMemberCount: null
         };
 
         try {
@@ -194,13 +196,15 @@ export function apply(ctx: Context, config: Config) {
           if ( config.verboseConsoleOutput ) ctx.logger.info(strangerInfoObjMsg);
 
           if (session.guildId) { // 如果在群聊中
-            const groupMemberInfoObj = await session.onebot.getGroupMemberInfo(
-              session.guildId, 
-              targetUserId
-            );
+            const groupMemberInfoObj = await session.onebot.getGroupMemberInfo(session.guildId, targetUserId);
             let groupMemberInfoObjMsg = `groupMemberInfoObj = \n\t ${JSON.stringify(groupMemberInfoObj)}`;
             if ( config.verboseSessionOutput ) await session.send(groupMemberInfoObjMsg);
             if ( config.verboseConsoleOutput ) ctx.logger.info(groupMemberInfoObjMsg);
+
+            const groupInfoObj = await session.onebot.getGroupInfo(session.guildId);
+            let groupInfoObjMsg = `groupInfoObj = \n\t ${JSON.stringify(groupInfoObj)}`;
+            if ( config.verboseSessionOutput ) await session.send(groupInfoObjMsg);
+            if ( config.verboseConsoleOutput ) ctx.logger.info(groupInfoObjMsg);
             
             // 合并群成员信息和陌生人信息，优先保留陌生人信息中的关键字段
             userInfoArg = {
@@ -224,7 +228,9 @@ export function apply(ctx: Context, config: Config) {
             contextInfo = {
               isGroup: true,
               groupId: session.guildId,
-              groupAvatarUrl: `https://p.qlogo.cn/gh/${session.guildId}/${session.guildId}/640/`
+              groupAvatarUrl: `https://p.qlogo.cn/gh/${session.guildId}/${session.guildId}/640/`,
+              memberCount: groupInfoObj.member_count || 0,
+              maxMemberCount: groupInfoObj.max_member_count || 0,
             };
           } else {
             // 私聊情况，只使用陌生人信息
@@ -236,7 +242,9 @@ export function apply(ctx: Context, config: Config) {
             contextInfo = {
               isGroup: false,
               groupId: null,
-              groupAvatarUrl: null
+              groupAvatarUrl: null,
+              memberCount: null,
+              maxMemberCount: null
             };
           }
 
@@ -258,7 +266,7 @@ export function apply(ctx: Context, config: Config) {
           }
 
           if (config.sendImage){
-            const waitTipMsgId = await session.send(`${h.quote(session.messageId)}qwq🔄正在渲染用户信息图片，请稍候⏳...`);
+            const waitTipMsgId = await session.send(`${h.quote(session.messageId)}🔄正在渲染用户信息图片，请稍候⏳...`);
             const userInfoimageBase64 = await renderUserInfo(ctx, userInfoArg, contextInfo, config.imageStyle, config.enableDarkMode, config.imageType, config.screenshotQuality);
             await session.send(`${config.enableQuoteWithImage ? h.quote(session.messageId) : ''}${h.image(`data:image/png;base64,${userInfoimageBase64}`)}`);
             await session.bot.deleteMessage(session.guildId, String(waitTipMsgId));
@@ -350,6 +358,7 @@ export function apply(ctx: Context, config: Config) {
           }
 
           if (config.sendImage) {
+            ctx.logger.info(`context info = ${JSON.stringify(contextInfo)}`)
             const waitTipMsgId = await session.send(`${h.quote(session.messageId)}🔄正在渲染群管理员列表图片，请稍候⏳...`);
             const adminListImageBase64 = await renderAdminList(ctx, adminListArg, contextInfo, config.imageStyle, config.enableDarkMode, config.imageType, config.screenshotQuality);
             await session.send(`${config.enableQuoteWithImage ? h.quote(session.messageId) : ''}${h.image(`data:image/png;base64,${adminListImageBase64}`)}`);

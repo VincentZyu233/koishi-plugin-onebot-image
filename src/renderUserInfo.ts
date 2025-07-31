@@ -11,16 +11,27 @@ export const inject = {
     required: ["puppeteer", "http"]
 }
 
-const getSourceHanSerifSCStyleUserInfoHtmlStr = async (userInfo, contextInfo, avatarBase64: string, groupAvatarBase64: string, fontBase64: string, enableDarkMode: boolean) => {
+
+const getSourceHanSerifSCStyleUserInfoHtmlStr = async (userInfo, contextInfo, avatarBase64, groupAvatarBase64, fontBase64, enableDarkMode) => {
     // 确保 avatarBase64 不为空，否则会影响背景图
     const backgroundStyle = avatarBase64
         ? `background-image: url(data:image/jpeg;base64,${avatarBase64});`
         : `background-color: #f0f2f5;`; // 提供一个 fallback 背景色
 
     // 生成当前时间戳
+    const generateTimestamp = () => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = (now.getMonth() + 1).toString().padStart(2, '0');
+        const day = now.getDate().toString().padStart(2, '0');
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        const seconds = now.getSeconds().toString().padStart(2, '0');
+        return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
+    };
+
     const timestamp = generateTimestamp();
 
-        
     // 根据是否为群聊生成不同的信息项
     const generateInfoItems = (userInfo, contextInfo) => {
         let items = [];
@@ -128,20 +139,20 @@ const getSourceHanSerifSCStyleUserInfoHtmlStr = async (userInfo, contextInfo, av
 
             if (userInfo.title) {
                 groupItems.push(`
-                    <div class="info-item full-width">
+                    <div class="info-item full-width title-item-row">
                         <div class="info-label">专属头衔</div>
                         <div class="info-value">${userInfo.title}</div>
                     </div>
                 `);
             }
 
-            // 处理时间信息 - 将加群时间和最后发言时间分成两行显示
+            // 处理时间信息 - 将加群时间和最后发言时间分成两行显示，增加间距
             const hasJoinTime = userInfo.join_time;
             const hasLastTime = userInfo.last_sent_time || userInfo.lastSentTime || userInfo.last_speak_time;
             
             if (hasJoinTime) {
                 groupItems.push(`
-                    <div class="info-item full-width time-item-row">
+                    <div class="info-item full-width join-time-item-row">
                         <div class="info-label">加群时间</div>
                         <div class="info-value">${new Date(userInfo.join_time * 1000).toLocaleString('zh-CN')}</div>
                     </div>
@@ -151,7 +162,7 @@ const getSourceHanSerifSCStyleUserInfoHtmlStr = async (userInfo, contextInfo, av
             if (hasLastTime) {
                 const lastTime = userInfo.last_sent_time || userInfo.lastSentTime || userInfo.last_speak_time;
                 groupItems.push(`
-                    <div class="info-item full-width time-item-row">
+                    <div class="info-item full-width last-speak-item-row">
                         <div class="info-label">最后发言</div>
                         <div class="info-value">${new Date(lastTime * 1000).toLocaleString('zh-CN')}</div>
                     </div>
@@ -288,36 +299,42 @@ const getSourceHanSerifSCStyleUserInfoHtmlStr = async (userInfo, contextInfo, av
         /* 群信息区域 - 调整为在user-profile内部布局 */
         .group-info-container {
             width: 100%;
-            padding: 10px 10px; /* 减少上下内边距，让红框区域往上提 */
+            padding: 2px 10px 16px 10px; /* 进一步调整内边距，让群头像和群号更向上 */
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 8px; /* 减少间距，让红框区域往上提 */
+            gap: 9px; /* 增加间距，确保item之间有更多空隙 */
             background: rgba(255, 255, 255, 0.2);
             border-top: 1px solid rgba(255, 255, 255, 0.3);
-            border-bottom-left-radius: 28px;
-            border-bottom-right-radius: 0;
+            border-bottom-left-radius: 32px;
+            border-bottom-right-radius: 32px;
             box-sizing: border-box;
-            min-height: 160px; /* 减少最小高度 */
+            min-height: 140px; /* 增加最小高度以适应新的间距 */
         }
 
         .group-info-container .info-item {
             width: 100%;
             box-sizing: border-box;
-            padding: 3px 6px; /* 进一步减小群信息项的内边距，让高度更窄 */
+            padding: 4.5px 5px; /* 增加群信息项的垂直内边距，增加空隙 */
         }
         
         /* 群信息项中的标签间距也要相应调整 */
         .group-info-container .info-label {
-            margin-bottom: 2px; /* 减小群信息项中标签的下边距 */
+            margin-bottom: 1.8px; /* 增加群信息项中标签的下边距 */
+            font-size: 13px; /* 增大群信息项标签字体 */
+        }
+        
+        .group-info-container .info-value {
+            font-size: 15px; /* 增大群信息项值字体 */
+            line-height: 1.3; /* 增加行高 */
         }
         
         /* 群等级和群角色两列布局 */
         .group-level-role-row {
             display: flex;
-            gap: 8px;
+            gap: 10px;
             width: 100%;
-            margin-bottom: 6px; /* 减少下边距 */
+            margin-bottom: 6px; /* 增加下边距 */
         }
         
         .group-level-item,
@@ -329,33 +346,57 @@ const getSourceHanSerifSCStyleUserInfoHtmlStr = async (userInfo, contextInfo, av
         .group-avatar-wrapper {
             display: flex;
             align-items: center;
-            gap: 12px; /* 减小间距 */
-            margin-bottom: 6px; /* 减少下边距，让红框区域往上提 */
+            gap: 15px; /* 增加间距 */
+            margin-bottom: -2px; /* 进一步减少下边距，让群头像和群号更靠近顶部 */
         }
         
-        /* 时间项行样式 - 单行显示 */
-        .time-item-row {
-            margin-bottom: 4px; /* 减少时间行之间的间距 */
+        /* 专属头衔行样式 */
+        .title-item-row {
+            margin: 2px 0 8px 0;
+        }
+        
+        /* 加群时间行样式 */
+        .join-time-item-row {
+            margin-bottom: 6px; /* 加群时间的下边距 */
+        }
+        
+        /* 最后发言行样式 - 单行显示 */
+        .last-speak-item-row {
+            margin-bottom: 0px; /* 最后发言向下移动，减少上边距 */
+            margin-top: 8px; /* 增加上边距，让最后发言向下 */
         }
 
         .group-avatar {
-            width: 69px; /* 增大群头像尺寸 */
-            height: 69px;
-            border-radius: 10px; /* 增大圆角 */
+            width: 75px;
+            height: 75px;
+            border-radius: 12px; /* 增大圆角 */
             object-fit: cover;
             border: 2px solid rgba(255, 255, 255, 0.6);
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
         
         .group-id {
-            font-size: 18px; /* 增大群号字体 */
+            font-size: 20px; /* 增大群号字体 */
             color: #444;
             background: rgba(255, 255, 255, 0.5);
-            padding: 6px 12px; /* 增大内边距 */
-            border-radius: 10px; /* 增大圆角 */
+            padding: 8px 15px; /* 增大内边距 */
+            border-radius: 12px; /* 增大圆角 */
             border: 1px solid rgba(255, 255, 255, 0.5);
             font-weight: 700;
             text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+        }
+        
+        /* 群人数信息样式 */
+        .group-member-count {
+            font-size: 16px; /* 群人数字体 */
+            color: #666;
+            background: rgba(255, 255, 255, 0.4);
+            padding: 6px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            font-weight: 600;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+            margin-top: 4px; /* 与群号的间距 */
         }
         
         /* 右侧信息区域 */
@@ -402,12 +443,12 @@ const getSourceHanSerifSCStyleUserInfoHtmlStr = async (userInfo, contextInfo, av
         }
         
         .info-item {
-            background: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.5);
             border-radius: 16px;
             padding: 13px 18px; /* 减小内边距以降低高度 */
-            border: 1px solid rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.8);
             transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
         
         .info-item.full-width {
@@ -504,6 +545,21 @@ const getSourceHanSerifSCStyleUserInfoHtmlStr = async (userInfo, contextInfo, av
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
         }
         
+        body.dark .group-member-count {
+            color: #ccc; /* 浅灰色文字 */
+            background: rgba(60, 60, 60, 0.8); /* 深色背景 */
+            border: 2px solid #777; /* 中灰色边框 */
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+        }
+        
+        body.dark .group-info-container .info-label {
+            color: #ccc; /* 浅灰色标签 */
+        }
+        
+        body.dark .group-info-container .info-value {
+            color: #eee; /* 浅灰色值 */
+        }
+        
         body.dark .info-title {
             background: linear-gradient(135deg, rgba(50, 50, 50, 0.8), rgba(30, 30, 30, 0.7)); /* 更深的透明渐变背景 */
             color: #f0f0f0;
@@ -553,7 +609,14 @@ const getSourceHanSerifSCStyleUserInfoHtmlStr = async (userInfo, contextInfo, av
                     <div class="group-info-container">
                         <div class="group-avatar-wrapper">
                             ${groupAvatarBase64 ? `<img class="group-avatar" src="data:image/jpeg;base64,${groupAvatarBase64}" alt="Group Avatar">` : ''}
-                            <div class="group-id">群号: ${contextInfo.groupId}</div>
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                                <div class="group-id">群号: ${contextInfo.groupId}</div>
+                                ${contextInfo.memberCount && contextInfo.maxMemberCount ? `
+                                    <div class="group-member-count">群人数: ${contextInfo.memberCount}/${contextInfo.maxMemberCount}</div>
+                                ` : contextInfo.memberCount ? `
+                                    <div class="group-member-count">群人数: ${contextInfo.memberCount}</div>
+                                ` : ''}
+                            </div>
                         </div>
                         <div style="width: 100%; padding: 0 15px;"> 
                             ${generateGroupSpecificItems(userInfo, contextInfo)}
@@ -727,7 +790,7 @@ const getLXGWWenKaiUserInfoHtmlStr = async (userInfo, contextInfo, avatarBase64:
         
         .avatar-frame {
             position: relative;
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }
         
         .avatar {
@@ -752,7 +815,7 @@ const getLXGWWenKaiUserInfoHtmlStr = async (userInfo, contextInfo, avatarBase64:
         }
         
         .user-name {
-            font-size: 28px;
+            font-size: 36px;
             font-weight: bold;
             color: #8b4513;
             margin-bottom: 8px;
@@ -760,7 +823,7 @@ const getLXGWWenKaiUserInfoHtmlStr = async (userInfo, contextInfo, avatarBase64:
         }
         
         .user-id {
-            font-size: 16px;
+            font-size: 20px;
             color: #a0522d;
             background: rgba(212, 175, 55, 0.1);
             padding: 6px 16px;
@@ -774,24 +837,38 @@ const getLXGWWenKaiUserInfoHtmlStr = async (userInfo, contextInfo, avatarBase64:
             width: 100%;
             background: rgba(212, 175, 55, 0.08);
             border: 1px solid rgba(212, 175, 55, 0.2);
-            border-radius: 15px;
-            padding: 15px;
+            border-radius: 15px 15px 32px 32px; /* 调整底部圆角与主卡片对齐 */
+            padding: 8px 15px 15px 15px; /* 减少上内边距，增加下内边距 */
             text-align: center;
+            margin-top: 25px; /* 增加上边距，让群信息区域整体下移 */
+            margin-bottom: 0; /* 确保底部没有额外间距 */
         }
         
         .group-avatar {
-            width: 60px;
-            height: 60px;
-            border-radius: 8px;
+            width: 78px; /* 增大1.3倍 */
+            height: 78px; /* 增大1.3倍 */
+            border-radius: 10px; /* 增大圆角 */
             object-fit: cover;
             border: 2px solid #d4af37;
-            margin-bottom: 8px;
+            margin-bottom: 4px; /* 减少下边距，让群头像往上提 */
         }
         
         .group-id {
-            font-size: 14px;
+            font-size: 18px; /* 增大1.3倍 */
             color: #8b4513;
             font-weight: bold;
+            margin-bottom: 5px; /* 减少下边距，让群号往上提 */
+        }
+        
+        .group-member-count {
+            font-size: 16px; /* 群人数字体 */
+            color: #8b4513;
+            font-weight: bold;
+            background: rgba(212, 175, 55, 0.15);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 8px;
+            padding: 4px 8px;
+            margin-bottom: 8px;
         }
         
         /* 右侧信息区域 */
@@ -804,7 +881,8 @@ const getLXGWWenKaiUserInfoHtmlStr = async (userInfo, contextInfo, avatarBase64:
         .info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
+            gap: 13px;
+            margin: 0 0 4.5px 0;
             flex: 1;
         }
         
@@ -845,15 +923,46 @@ const getLXGWWenKaiUserInfoHtmlStr = async (userInfo, contextInfo, avatarBase64:
         .group-info-grid {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 10px;
-            margin-top: 15px;
+            gap: 8px; /* 增加间距 */
+            margin-top: 15px; /* 增加上边距，让最后发言往下移 */
         }
         
         .group-info-card {
             background: rgba(212, 175, 55, 0.1);
             border: 1px solid rgba(212, 175, 55, 0.25);
             border-radius: 10px;
-            padding: 10px;
+            padding: 5px 9px; /* 增大内边距 */
+        }
+        
+        .group-info-card .info-label {
+            font-size: 13px; /* 增大1.3倍 */
+            color: #8b4513;
+            margin-bottom: 2px; /* 增加下边距 */
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+        
+        .group-info-card .info-value {
+            font-size: 15px; /* 增大1.3倍 */
+            color: #3a2f2a;
+            line-height: 1.133; /* 增加行高 */
+            word-break: break-all;
+        }
+        
+        /* 专属头衔项样式 */
+        .title-item-row {
+            margin-bottom: 2px; /* 增加专属头衔的下边距 */
+        }
+        
+        /* 加群时间项样式 */
+        .join-time-item-row {
+            margin-top: 2px; /* 增加加群时间的上边距 */
+            margin-bottom: 2px; /* 增加加群时间的下边距 */
+        }
+        
+        /* 最后发言项样式 */
+        .last-speak-item-row {
+            margin-top: 2px; /* 增加最后发言的上边距，让它往下移 */
         }
         
         .timestamp-watermark {
@@ -927,6 +1036,12 @@ const getLXGWWenKaiUserInfoHtmlStr = async (userInfo, contextInfo, avatarBase64:
             border-color: rgba(184, 134, 11, 0.3);
         }
         
+        body.dark .group-member-count {
+            color: #daa520;
+            background: rgba(184, 134, 11, 0.25);
+            border-color: rgba(184, 134, 11, 0.4);
+        }
+        
         body.dark .group-info-card {
             background: rgba(184, 134, 11, 0.2);
             border-color: rgba(184, 134, 11, 0.35);
@@ -962,7 +1077,12 @@ const getLXGWWenKaiUserInfoHtmlStr = async (userInfo, contextInfo, avatarBase64:
                     <div class="group-section">
                         ${groupAvatarBase64 ? `<img class="group-avatar" src="data:image/jpeg;base64,${groupAvatarBase64}" alt="群头像">` : ''}
                         <div class="group-id">群号: ${contextInfo.groupId}</div>
-                        
+                        ${contextInfo.memberCount && contextInfo.maxMemberCount ? `
+                            <div class="group-member-count">群人数: ${contextInfo.memberCount}/${contextInfo.maxMemberCount}</div>
+                        ` : contextInfo.memberCount ? `
+                            <div class="group-member-count">群人数: ${contextInfo.memberCount}</div>
+                        ` : ''}
+
                         <div class="group-info-grid">
                             ${userInfo.group_level || userInfo.role ? `
                                 <div class="group-role-level">
@@ -978,21 +1098,21 @@ const getLXGWWenKaiUserInfoHtmlStr = async (userInfo, contextInfo, avatarBase64:
                             ` : ''}
                             
                             ${userInfo.title ? `
-                                <div class="group-info-card">
+                                <div class="group-info-card title-item-row">
                                     <div class="info-label">专属头衔</div>
                                     <div class="info-value">${userInfo.title}</div>
                                 </div>
                             ` : ''}
                             
                             ${userInfo.join_time ? `
-                                <div class="group-info-card">
+                                <div class="group-info-card join-time-item-row">
                                     <div class="info-label">加群时间</div>
                                     <div class="info-value">${new Date(userInfo.join_time * 1000).toLocaleString('zh-CN')}</div>
                                 </div>
                             ` : ''}
                             
                             ${userInfo.last_sent_time || userInfo.lastSentTime || userInfo.last_speak_time ? `
-                                <div class="group-info-card">
+                                <div class="group-info-card last-speak-item-row">
                                     <div class="info-label">最后发言</div>
                                     <div class="info-value">${new Date((userInfo.last_sent_time || userInfo.lastSentTime || userInfo.last_speak_time) * 1000).toLocaleString('zh-CN')}</div>
                                 </div>
