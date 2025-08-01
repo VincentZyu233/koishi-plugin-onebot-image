@@ -9,6 +9,12 @@ export const inject = {
     required: ["puppeteer", "http"]
 }
 
+const formatMsTimestamp = (timestamp) => {
+    if (!timestamp) return '<span class="unknown">未知</span>';
+    const date = new Date(timestamp);
+    return date.toLocaleString('zh-CN');
+};
+
 const getSourceHanSerifSCStyleUserInfoHtmlStr = async (userInfo, contextInfo, avatarBase64, groupAvatarBase64, fontBase64, enableDarkMode) => {
     const timestamp = generateTimestamp();
 
@@ -16,11 +22,7 @@ const getSourceHanSerifSCStyleUserInfoHtmlStr = async (userInfo, contextInfo, av
         ? `background-image: url(data:image/jpeg;base64,${avatarBase64});`
         : `background-color: #f0f2f5;`;
 
-    const formatTime = (timestamp) => {
-        if (!timestamp) return '<span class="unknown">未知</span>';
-        const date = new Date(timestamp * 1000);
-        return date.toLocaleString('zh-CN');
-    };
+ 
 
     const getValue = (value, fallback = '<span class="unknown">未知</span>') => value && value !== '-' ? value : fallback;
 
@@ -79,13 +81,13 @@ const getSourceHanSerifSCStyleUserInfoHtmlStr = async (userInfo, contextInfo, av
         getInfoItem('年龄', getValue(userInfo.age)),
         getInfoItem('QQ等级', getValue(userInfo.qq_level || userInfo.level)),
         getInfoItem('QID', getValue(userInfo.qid)),
-        getInfoItem('注册时间', formatTime(userInfo.RegisterTime)),
+        getInfoItem('注册时间', formatMsTimestamp(userInfo.RegisterTime)),
         getInfoItem('个性签名', getValue(userInfo.sign || userInfo.longNick), true),
         getInfoItem('邮箱', getValue(userInfo.eMail || userInfo.email)),
         getInfoItem('电话', getValue(userInfo.phoneNum || userInfo.phone)),
         getInfoItem('地址信息', getLocationString(userInfo), true),
         `
-        <div class="three-column-row">
+        <div class="two-column-row">
             <div class="info-item">
                 <div class="info-label">生肖</div>
                 <div class="info-value">${getValue(getShengXiao(userInfo.shengXiao))}</div>
@@ -93,10 +95,6 @@ const getSourceHanSerifSCStyleUserInfoHtmlStr = async (userInfo, contextInfo, av
             <div class="info-item">
                 <div class="info-label">星座</div>
                 <div class="info-value">${getValue(getConstellation(userInfo.constellation))}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">血型</div>
-                <div class="info-value">${getValue(getBloodType(userInfo.kBloodType))}</div>
             </div>
         </div>
         `,
@@ -125,8 +123,8 @@ const getSourceHanSerifSCStyleUserInfoHtmlStr = async (userInfo, contextInfo, av
                 </div>
                 ${getGroupInfoItem('专属头衔', getValue(userInfo.title), 'full-width')}
                 <div class="group-time-row">
-                    ${getGroupInfoItem('加群时间', formatTime(userInfo.join_time), 'join-time-item')}
-                    ${getGroupInfoItem('最后发言', formatTime(userInfo.last_sent_time || userInfo.lastSentTime || userInfo.last_speak_time), 'last-speak-item')}
+                    ${getGroupInfoItem('加群时间', formatMsTimestamp(userInfo.join_time), 'join-time-item')}
+                    ${getGroupInfoItem('最后发言', formatMsTimestamp(userInfo.last_sent_time || userInfo.lastSentTime || userInfo.last_speak_time), 'last-speak-item')}
                 </div>
             </div>
         </div>
@@ -164,7 +162,9 @@ const getSourceHanSerifSCStyleUserInfoHtmlStr = async (userInfo, contextInfo, av
         .info-title{font-size:36px;font-weight:700;color:#111;margin-bottom:8px;text-align:center;position:relative;background:rgba(255,255,255,.25);padding:12px 28px;border-radius:18px;border:1px solid rgba(255,255,255,.5);text-shadow:0 3px 6px rgba(255,255,255,.7);}
         .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;flex-grow:1;align-content:start;overflow:visible;}
         .three-column-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;grid-column:1/-1;}
+        .two-column-row{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;grid-column:1/-1;}
         .info-grid .three-column-row .info-item{grid-column:span 1;}
+        .info-grid .two-column-row .info-item{grid-column:span 1;}
         .info-item{background:rgba(255,255,255,.5);border-radius:10px;padding:7px 9px;border:1px solid rgba(255,255,255,.8);transition:all .3s cubic-bezier(.25,.8,.25,1);box-shadow:3px 3px 9px rgba(0,0,0,0.3);}
         .info-item.full-width{grid-column:1/-1;}
         .info-label{font-size:14px;font-weight:500;color:#666;margin-bottom:2px;}
@@ -331,8 +331,8 @@ ${contextInfo.memberCount?`<div class="group-member-count">群人数: ${contextI
 <div class="group-info-card"><div class="info-label">群等级</div><div class="info-value">${userInfo.group_level || '<span class="unknown">未知</span>'}</div></div>
 <div class="group-info-card"><div class="info-label">群角色</div><div class="info-value">${getGroupRole(userInfo.role)}</div></div>
 <div class="group-info-card full-width"><div class="info-label">专属头衔</div><div class="info-value">${userInfo.title || '<span class="unknown">未获取</span>'}</div></div>
-<div class="group-info-card"><div class="info-label">加群时间</div><div class="info-value time-value">${userInfo.join_time?new Date(userInfo.join_time*1000).toLocaleString('zh-CN'):'<span class="unknown">未知</span>'}</div></div>
-<div class="group-info-card"><div class="info-label">最后发言</div><div class="info-value time-value">${(userInfo.last_sent_time||userInfo.lastSentTime||userInfo.last_speak_time)?new Date((userInfo.last_sent_time||userInfo.lastSentTime||userInfo.last_speak_time)*1000).toLocaleString('zh-CN'):'<span class="unknown">未知</span>'}</div></div>
+<div class="group-info-card"><div class="info-label">加群时间</div><div class="info-value time-value">${userInfo.join_time?new Date(userInfo.join_time).toLocaleString('zh-CN'):'<span class="unknown">未知</span>'}</div></div>
+<div class="group-info-card"><div class="info-label">最后发言</div><div class="info-value time-value">${(userInfo.last_sent_time)?new Date(userInfo.last_sent_time).toLocaleString('zh-CN'):'<span class="unknown">未知</span>'}</div></div>
 </div>
 </div>`:''}
 </div>
