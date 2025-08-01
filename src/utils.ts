@@ -1,7 +1,7 @@
 import { Context } from 'koishi';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { FONT_FILES, type ImageStyle } from './constants';
+import { FONT_FILES, type ImageStyle } from './type';
 
 
 /**

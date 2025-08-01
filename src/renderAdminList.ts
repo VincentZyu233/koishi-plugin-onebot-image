@@ -2,35 +2,14 @@
 import { Context } from 'koishi';
 import { } from 'koishi-plugin-puppeteer'; // 引入 puppeteer 类型，但不直接使用 Puppeteer 类
 
-import { IMAGE_STYLES, FONT_FILES, type ImageStyle, ImageType } from './constants';
+import { IMAGE_STYLES, FONT_FILES, type ImageStyle, ImageType, UnifiedAdminInfo, UnifiedContextInfo } from './type';
 import { generateTimestamp, getGroupAvatarBase64, getFontBase64 } from './utils';
 
 export const inject = {
     required: ["puppeteer", "http"]
 }
 
-export interface AdminInfo {
-    user_id: number;
-    nickname: string;
-    card?: string;
-    role: 'owner' | 'admin';
-    level?: string;
-    join_time?: number;
-    last_sent_time?: number;
-    title?: string;
-    avatar?: string;
-}
-
-export interface ContextInfo {
-    isGroup: boolean;
-    groupId?: number;
-    groupAvatarUrl?: string;
-    groupName?: string;
-    memberCount?: number;
-    maxMemberCount?: number;
-}
-
-const generateAdminListItems = (admins: AdminInfo[]) => {
+const generateAdminListItems = (admins: UnifiedAdminInfo[]) => {
     return admins.map((admin, index) => `
         <div class="admin-item">
           <div class="admin-column-1">
@@ -51,7 +30,7 @@ const generateAdminListItems = (admins: AdminInfo[]) => {
     `).join('');
 };
 
-const getSourceHanSerifSCStyleAdminListHtmlStr = async (admins: AdminInfo[], contextInfo: ContextInfo, groupAvatarBase64: string, fontBase64: string, enableDarkMode: boolean) => {
+const getSourceHanSerifSCStyleAdminListHtmlStr = async (admins: UnifiedAdminInfo[], contextInfo: UnifiedContextInfo, groupAvatarBase64: string, fontBase64: string, enableDarkMode: boolean) => {
     // 调整背景样式为 cover，并居中
     const backgroundStyle = groupAvatarBase64
         ? `background-image: radial-gradient(circle at center, rgba(255,255,255,0.15), rgba(0,0,0,0.1)), url(data:image/jpeg;base64,${groupAvatarBase64}); background-size: cover; background-position: center center; background-repeat: no-repeat;`
@@ -195,7 +174,7 @@ const getSourceHanSerifSCStyleAdminListHtmlStr = async (admins: AdminInfo[], con
 </html>`;
 };
 
-const getLXGWWenKaiAdminListHtmlStr = async (admins: AdminInfo[], contextInfo: ContextInfo, groupAvatarBase64: string, fontBase64: string, enableDarkMode: boolean) => {
+const getLXGWWenKaiAdminListHtmlStr = async (admins: UnifiedAdminInfo[], contextInfo: UnifiedContextInfo, groupAvatarBase64: string, fontBase64: string, enableDarkMode: boolean) => {
     // 调整背景样式为 cover，并居中
     const backgroundStyle = groupAvatarBase64
         ? `background-image: linear-gradient(45deg, rgba(245,240,230,0.85), rgba(250,245,235,0.85)), url(data:image/jpeg;base64,${groupAvatarBase64}); background-size: cover; background-position: center center; background-repeat: no-repeat;`
@@ -346,8 +325,8 @@ const getLXGWWenKaiAdminListHtmlStr = async (admins: AdminInfo[], contextInfo: C
 // 主渲染函数
 export async function renderAdminList(
     ctx: Context,
-    admins: AdminInfo[],
-    contextInfo: ContextInfo,
+    admins: UnifiedAdminInfo[],
+    contextInfo: UnifiedContextInfo,
     imageStyle: ImageStyle,
     enableDarkMode: boolean,
     imageType: ImageType,

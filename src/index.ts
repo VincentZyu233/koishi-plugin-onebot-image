@@ -4,10 +4,10 @@ import { readFileSync } from 'fs'
 import { resolve } from 'path'
 import {} from 'koishi-plugin-adapter-onebot';
 
-import { IMAGE_STYLES, type ImageStyle, IMAGE_TYPES, type ImageType } from './constants';
-import { renderUserInfo } from './renderUserInfo'; // 导入 renderUserInfo 函数
-import { renderAdminList, type AdminInfo } from './renderAdminList'; // 导入 renderAdminList 函数
-import { group } from 'console';
+import { IMAGE_STYLES, type ImageStyle, IMAGE_TYPES, type ImageType, ONEBOT_IMPL_NAME, type OneBotImplName, getNapcatQQStatusText } from './type';
+import { renderUserInfo } from './renderUserInfo'
+import { renderAdminList } from './renderAdminList'
+import { convertToUnifiedUserInfo, convertToUnifiedAdminInfo, convertToUnifiedContextInfo, UnifiedUserInfo, UnifiedAdminInfo, UnifiedContextInfo } from './type'
 
 export const name = 'onebot-info-image'
 
@@ -49,6 +49,8 @@ export const usage = `
 
 
 export interface Config {
+  onebotImplName: OneBotImplName;
+
   enableUserInfoCommand: boolean;
   userinfoCommandName: string;
   enableGroupAdminListCommand: boolean;
@@ -70,6 +72,16 @@ export interface Config {
   verboseConsoleOutput: boolean
 }
 export const Config: Schema<Config> = Schema.intersect([
+  Schema.object({
+    onebotImplName: Schema.union([
+      Schema.const(ONEBOT_IMPL_NAME.LAGRNAGE).description('Lagrange'),
+      Schema.const(ONEBOT_IMPL_NAME.NAPCAT).description('NapCat'),
+      // Schema.const(ONEBOT_IMPL_NAME.LLONEBOT).description('LLOneBot'),
+    ])
+      .role('radio')
+      .default(ONEBOT_IMPL_NAME.LAGRNAGE)
+      .description('【重要】OneBot 的具体实现名称(选错了会导致获取到的内容会变少)'),
+  }),
 
   Schema.object({
     enableUserInfoCommand: Schema.boolean()
@@ -179,14 +191,18 @@ export function apply(ctx: Context, config: Config) {
         // await session.send(userObjMsg);
         const userAvatarUrl = userObj.avatar;
 
-        let userInfoArg;
+        let userInfoArg = {
+          status: null
+        };
         let contextInfo = {
           isGroup: false,
           groupId: null,
+          groupName: null,
           groupAvatarUrl: null,
           memberCount: null,
           maxMemberCount: null
         };
+
 
         try {
           // 获取陌生人信息（包含头像等基本信息）
@@ -210,6 +226,7 @@ export function apply(ctx: Context, config: Config) {
             userInfoArg = {
               ...groupMemberInfoObj,
               ...strangerInfoObj,
+              // @ts-ignore - strangerInfoObj 实际包含 age 字段，但类型定义中缺失
               age: strangerInfoObj.age,
               // @ts-ignore - strangerInfoObj 实际包含 level 字段，但类型定义中缺失 (here ↓)
               // node_modules/koishi-plugin-adapter-onebot/lib/types.d.ts:  export interface StrangerInfo ...
@@ -228,6 +245,8 @@ export function apply(ctx: Context, config: Config) {
             contextInfo = {
               isGroup: true,
               groupId: session.guildId,
+              //@ts-ignore - groupInfoObj 在lagrange中 实际包含 GroupName 字段，但类型定义中缺失
+              groupName: groupInfoObj.GroupName || groupInfoObj.group_name,
               groupAvatarUrl: `https://p.qlogo.cn/gh/${session.guildId}/${session.guildId}/640/`,
               memberCount: groupInfoObj.member_count || 0,
               maxMemberCount: groupInfoObj.max_member_count || 0,
@@ -236,17 +255,28 @@ export function apply(ctx: Context, config: Config) {
             // 私聊情况，只使用陌生人信息
             userInfoArg = {
               ...strangerInfoObj,
-              // 确保头像字段存在
+              // @ts-ignore - userObj 确实有avatar字段
               avatar: userObj.avatar
             };
             contextInfo = {
               isGroup: false,
               groupId: null,
+              groupName: null,
               groupAvatarUrl: null,
               memberCount: null,
               maxMemberCount: null
             };
           }
+
+        if ( config.onebotImplName === ONEBOT_IMPL_NAME.NAPCAT ){
+          const ncUserStatusObj = await session.onebot._request('nc_get_user_status', { user_id: targetUserId });
+          // ctx.logger.info(`[napcat独有]: ncUserStatusObj = \n\t ${JSON.stringify(ncUserStatusObj)}`);
+          userInfoArg.status = {
+            napcat_origin: ncUserStatusObj,
+            message: getNapcatQQStatusText(ncUserStatusObj?.data.status, ncUserStatusObj?.data.ext_status)
+          }
+          // ctx.logger.info(`[napcat独有]: userInfoArg.status = \n\t ${JSON.stringify(userInfoArg.status)}`);
+        }
 
           let userInfoArgMsg = `userInfoArg = \n\t ${JSON.stringify(userInfoArg)}`;
           let contextInfoMsg = `contextInfo = \n\t ${JSON.stringify(contextInfo)}`;
@@ -259,21 +289,37 @@ export function apply(ctx: Context, config: Config) {
             await ctx.logger.info(contextInfoMsg);
           }
 
+          const unifiedUserInfo = convertToUnifiedUserInfo(userInfoArg, config.onebotImplName);
+          const unifiedContextInfo = convertToUnifiedContextInfo(contextInfo, config.onebotImplName);
+
+          let unifiedUserInfoMsg = `unifiedUserInfo = \n\t ${JSON.stringify(unifiedUserInfo)}`;
+          let unifiedContextInfoMsg = `unifiedContextInfo = \n\t ${JSON.stringify(unifiedContextInfo)}`;
+          await ctx.logger.info(unifiedUserInfoMsg); //debug的，这行记得删了
+          await ctx.logger.info(unifiedContextInfoMsg); //debug的，这行记得删了
+          if ( config.verboseSessionOutput ) {
+            await session.send(unifiedUserInfoMsg);
+            await session.send(unifiedContextInfoMsg);
+          }
+          if ( config.verboseConsoleOutput ) {
+            await ctx.logger.info(unifiedUserInfoMsg);
+            await ctx.logger.info(unifiedContextInfoMsg);
+          }
+
           if (config.sendText) {
             ctx.logger.info("text");
-            const formattedText = formatUserInfoDirectText(userInfoArg, contextInfo);
+            const formattedText = formatUserInfoDirectText(unifiedUserInfo, unifiedContextInfo);
             session.send(`${config.enableQuoteWithText ? h.quote(session.messageId) : ''}${formattedText}`);
           }
 
           if (config.sendImage){
             const waitTipMsgId = await session.send(`${h.quote(session.messageId)}🔄正在渲染用户信息图片，请稍候⏳...`);
-            const userInfoimageBase64 = await renderUserInfo(ctx, userInfoArg, contextInfo, config.imageStyle, config.enableDarkMode, config.imageType, config.screenshotQuality);
+            const userInfoimageBase64 = await renderUserInfo(ctx, unifiedUserInfo, unifiedContextInfo, config.imageStyle, config.enableDarkMode, config.imageType, config.screenshotQuality);
             await session.send(`${config.enableQuoteWithImage ? h.quote(session.messageId) : ''}${h.image(`data:image/png;base64,${userInfoimageBase64}`)}`);
             await session.bot.deleteMessage(session.guildId, String(waitTipMsgId));
           }
 
           if (config.sendForward) {
-            const forwardMessageContent = formatUserInfoForwardText(session.bot, userInfoArg, contextInfo);
+            const forwardMessageContent = formatUserInfoForwardText(session.bot, unifiedUserInfo, unifiedContextInfo);
             session.send(h.unescape(forwardMessageContent)); 
           }
           
@@ -310,13 +356,13 @@ export function apply(ctx: Context, config: Config) {
           }
 
           // 获取管理员头像并转换为 AdminInfo 格式
-          const adminListArg: AdminInfo[] = [];
+          const adminListArg: UnifiedAdminInfo[] = [];
           for (const member of groupAdminMemberListObj) {
             try {
               // @ts-ignore - getGroupMemberList()返回的数组里面，每一个member对象 实际包含 user_id 字段，但类型定义中缺失 (here ↓)
               // node_modules/koishi-plugin-adapter-onebot/lib/types.d.ts:  export interface GroupMemberInfo extends SenderInfo
               const userObj = await session.bot.getUser(member.user_id);
-              adminListArg.push({
+              const rawAdminInfo = {
                 user_id: member.user_id,
                 nickname: member.nickname,
                 card: member.card,
@@ -326,7 +372,8 @@ export function apply(ctx: Context, config: Config) {
                 last_sent_time: member.last_sent_time,
                 title: member.title,
                 avatar: userObj.avatar || ''
-              });
+              };
+              adminListArg.push(convertToUnifiedAdminInfo(rawAdminInfo, config.onebotImplName));
             } catch (error) {
               ctx.logger.error(`获取管理员列表信息失败: ${error}`);
             }
@@ -353,20 +400,23 @@ export function apply(ctx: Context, config: Config) {
           };
 
           if (config.sendText) {
-            const formattedText = formatAdminListDirectText(adminListArg, contextInfo);
+            const unifiedContextInfo = convertToUnifiedContextInfo(contextInfo, config.onebotImplName);
+            const formattedText = formatAdminListDirectText(adminListArg, unifiedContextInfo);
             await session.send(`${config.enableQuoteWithText ? h.quote(session.messageId) : ''}${formattedText}`);
           }
 
           if (config.sendImage) {
             ctx.logger.info(`context info = ${JSON.stringify(contextInfo)}`)
             const waitTipMsgId = await session.send(`${h.quote(session.messageId)}🔄正在渲染群管理员列表图片，请稍候⏳...`);
-            const adminListImageBase64 = await renderAdminList(ctx, adminListArg, contextInfo, config.imageStyle, config.enableDarkMode, config.imageType, config.screenshotQuality);
+            const unifiedContextInfo = convertToUnifiedContextInfo(contextInfo, config.onebotImplName);
+            const adminListImageBase64 = await renderAdminList(ctx, adminListArg, unifiedContextInfo, config.imageStyle, config.enableDarkMode, config.imageType, config.screenshotQuality);
             await session.send(`${config.enableQuoteWithImage ? h.quote(session.messageId) : ''}${h.image(`data:image/png;base64,${adminListImageBase64}`)}`);
             await session.bot.deleteMessage(session.guildId, String(waitTipMsgId));
           }
 
           if (config.sendForward) {
-            const forwardMessageContent = formatAdminListForwardText(adminListArg, contextInfo);
+            const unifiedContextInfo = convertToUnifiedContextInfo(contextInfo, config.onebotImplName);
+            const forwardMessageContent = formatAdminListForwardText(adminListArg, unifiedContextInfo);
             await session.send(h.unescape(forwardMessageContent));
           }
 
@@ -383,7 +433,7 @@ export function apply(ctx: Context, config: Config) {
 
     //   });
 
-    function formatUserInfoDirectText(userInfo: any, contextInfo: any): string {
+    function formatUserInfoDirectText(userInfo: UnifiedUserInfo, contextInfo: UnifiedContextInfo): string {
       let output = '';
 
       // User Information
@@ -408,7 +458,7 @@ export function apply(ctx: Context, config: Config) {
       return output;
     }
 
-    function formatUserInfoForwardText(botSelf: any, userInfo: any, contextInfo: any): string {
+    function formatUserInfoForwardText(botSelf: any, userInfo: UnifiedUserInfo, contextInfo: UnifiedContextInfo): string {
       let messages = '';
 
       // Helper to add a message block
@@ -444,7 +494,7 @@ export function apply(ctx: Context, config: Config) {
       return `<message forward>\n${messages}\n</message>`;
     }
 
-    function formatAdminListDirectText(adminListArg: AdminInfo[], contextInfo: any): string {
+    function formatAdminListDirectText(adminListArg: UnifiedAdminInfo[], contextInfo: UnifiedContextInfo): string {
       let output = '';
 
       output += `当前时间 (Current Time): ${new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}\n`;
@@ -468,7 +518,7 @@ export function apply(ctx: Context, config: Config) {
       return output;
     }
 
-    function formatAdminListForwardText(adminListArg: AdminInfo[], contextInfo: any): string {
+    function formatAdminListForwardText(adminListArg: UnifiedAdminInfo[], contextInfo: UnifiedContextInfo): string {
         let messages = '';
 
         // Helper to add a message block with author
