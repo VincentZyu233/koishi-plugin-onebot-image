@@ -16,8 +16,13 @@ const pkg = JSON.parse(
 )
 
 export const usage = `
+<h1>Koishi 插件：onebot-info-image 获取群员信息 渲染成图像</h1>
 <h2>🎯 插件版本：v${pkg.version}</h2>
 <p>插件使用问题 / Bug反馈 / 插件开发交流，欢迎加入QQ群：<b>259248174</b></p>
+
+目前仅仅适配了Lagrange 和 Napcat 协议
+<br>
+Napcat能拿到的东西更多， 为了更好的使用体验，推荐使用Napcat
 
 <hr>
 
@@ -146,7 +151,7 @@ export const Config: Schema<Config> = Schema.intersect([
   Schema.object({
     verboseSessionOutput: Schema.boolean()
       .default(false)
-      .description('🗣️ 是否在会话中输出详细信息。'),
+      .description('🗣️ 是否在会话中输出详细信息。(生产环境别开，东西很多)'),
     verboseConsoleOutput: Schema.boolean()
       .default(false)
       .description('💻 是否在控制台输出详细信息。'),
@@ -266,7 +271,11 @@ export function apply(ctx: Context, config: Config) {
             };
           }
 
-        if ( config.onebotImplName === ONEBOT_IMPL_NAME.NAPCAT ){
+        if ( config.onebotImplName === ONEBOT_IMPL_NAME.LAGRNAGE ){
+          // userInfoArg.status = {
+
+          // }
+        } else if ( config.onebotImplName === ONEBOT_IMPL_NAME.NAPCAT ){
           const ncUserStatusObj = await session.onebot._request('nc_get_user_status', { user_id: targetUserId });
           // ctx.logger.info(`[napcat独有]: ncUserStatusObj = \n\t ${JSON.stringify(ncUserStatusObj)}`);
           userInfoArg.status = {
@@ -274,7 +283,7 @@ export function apply(ctx: Context, config: Config) {
             message: getNapcatQQStatusText(ncUserStatusObj?.data.status, ncUserStatusObj?.data.ext_status)
           }
           // ctx.logger.info(`[napcat独有]: userInfoArg.status = \n\t ${JSON.stringify(userInfoArg.status)}`);
-        }
+        } 
 
           let userInfoArgMsg = `userInfoArg = \n\t ${JSON.stringify(userInfoArg)}`;
           let contextInfoMsg = `contextInfo = \n\t ${JSON.stringify(contextInfo)}`;
@@ -292,8 +301,6 @@ export function apply(ctx: Context, config: Config) {
 
           let unifiedUserInfoMsg = `unifiedUserInfo = \n\t ${JSON.stringify(unifiedUserInfo)}`;
           let unifiedContextInfoMsg = `unifiedContextInfo = \n\t ${JSON.stringify(unifiedContextInfo)}`;
-          await ctx.logger.info(unifiedUserInfoMsg); //debug的，这行记得删了
-          await ctx.logger.info(unifiedContextInfoMsg); //debug的，这行记得删了
           if ( config.verboseSessionOutput ) {
             await session.send(unifiedUserInfoMsg);
             await session.send(unifiedContextInfoMsg);
@@ -323,8 +330,8 @@ export function apply(ctx: Context, config: Config) {
           
 
         } catch (error) {
-          ctx.logger.error(`获取用户信息或渲染图片失败: ${error}`);
-          await session.send(`[error]获取用户信息或渲染图片失败: ${error.message}`);
+          ctx.logger.error(`获取用户信息或渲染图片失败: \n\terror=${error}\n\terror.stack=${error.stack}`);
+          await session.send(`[error]获取用户信息或渲染图片失败: \n\terror.message=${error.message}`);
         }
         
       })
@@ -444,7 +451,7 @@ export function apply(ctx: Context, config: Config) {
       if (userInfo.level) output += `等级\t\t(Level): \t\t ${userInfo.level}\n`;
       if (userInfo.sign) output += `个性签名\t(Signature): \t ${userInfo.sign}\n`;
       if (userInfo.role) output += `群角色\t(GroupRole): \t ${userInfo.role === 'owner' ? '群主 (Owner)' : userInfo.role === 'admin' ? '管理员 (Admin)' : '成员 (Member)'}\n`;
-      if (userInfo.join_time) output += `入群时间\t(JoinTime): \t ${new Date(userInfo.join_time * 1000).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}\n`;
+      if (userInfo.join_time) output += `入群时间\t(JoinTime): \t ${new Date(userInfo.join_time).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}\n`;
       if (userInfo.RegisterTime) output += `注册时间\t(RegTime): \t ${new Date(userInfo.RegisterTime).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}\n`;
 
 
@@ -479,7 +486,7 @@ export function apply(ctx: Context, config: Config) {
       if (userInfo.level) addMessageBlock(userInfo.user_id, undefined, `等级 (Level):\t${userInfo.level}`);
       if (userInfo.sign) addMessageBlock(userInfo.user_id, undefined, `个性签名 (Signature):\t${userInfo.sign}`);
       if (userInfo.role) addMessageBlock(userInfo.user_id, undefined, `群角色 (GroupRole):\t\t${userInfo.role === 'owner' ? '群主 (Owner)' : userInfo.role === 'admin' ? '管理员 (Admin)' : '成员 (Member)'}`);
-      if (userInfo.join_time) addMessageBlock(userInfo.user_id, undefined, `入群时间 (JoinTime):\t${new Date(userInfo.join_time * 1000).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}`);
+      if (userInfo.join_time) addMessageBlock(userInfo.user_id, undefined, `入群时间 (JoinTime):\t${new Date(userInfo.join_time).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}`);
       if (userInfo.RegisterTime) addMessageBlock(userInfo.user_id, undefined, `注册时间 (RegTime):\t${new Date(userInfo.RegisterTime).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}`);
 
 

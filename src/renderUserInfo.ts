@@ -80,7 +80,7 @@ const getSourceHanSerifSCStyleUserInfoHtmlStr = async (userInfo, contextInfo, av
         getInfoItem('性别', getSex(userInfo.sex)),
         getInfoItem('年龄', getValue(userInfo.age)),
         getInfoItem('QQ等级', getValue(userInfo.qq_level || userInfo.level)),
-        getInfoItem('QID', getValue(userInfo.qid)),
+        getInfoItem('QID', getValue(userInfo.q_id)),
         getInfoItem('注册时间', formatMsTimestamp(userInfo.RegisterTime)),
         getInfoItem('个性签名', getValue(userInfo.sign || userInfo.longNick), true),
         getInfoItem('邮箱', getValue(userInfo.eMail || userInfo.email)),
@@ -341,7 +341,7 @@ ${contextInfo.memberCount?`<div class="group-member-count">群人数: ${contextI
 <div class="info-card"><div class="info-label">性别</div><div class="info-value">${userInfo.sex === 'male'?'男':userInfo.sex === 'female'?'女':'未知'}</div></div>
 <div class="info-card"><div class="info-label">年龄</div><div class="info-value">${userInfo.age || '<span class="unknown">未知</span>'}</div></div>
 <div class="info-card"><div class="info-label">QQ等级</div><div class="info-value">${userInfo.qq_level || userInfo.level || '<span class="unknown">未知</span>'}</div></div>
-<div class="info-card"><div class="info-label">QID</div><div class="info-value">${userInfo.q_id || userInfo.user_id || userInfo.qq || userInfo.uin || '<span class="unknown">未知</span>'}</div></div>
+<div class="info-card"><div class="info-label">QID</div><div class="info-value">${userInfo.q_id || '<span class="unknown">未知</span>'}</div></div>
 ${userInfo.sign||userInfo.longNick?`<div class="info-card full-width"><div class="info-label">个性签名</div><div class="info-value">${userInfo.sign||userInfo.longNick}</div></div>`:''}
 ${userInfo.RegisterTime?`<div class="info-card full-width"><div class="info-label">注册时间</div><div class="info-value">${new Date(userInfo.RegisterTime).toLocaleString('zh-CN')}</div></div>`:''}
 <div class="info-card"><div class="info-label">邮箱</div><div class="info-value">${(userInfo.eMail || userInfo.email) && userInfo.eMail !== '-' ? (userInfo.eMail || userInfo.email) : '<span class="unknown">未知</span>'}</div></div>
