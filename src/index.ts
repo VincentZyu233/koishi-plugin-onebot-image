@@ -15,8 +15,6 @@ const pkg = JSON.parse(
   readFileSync(resolve(__dirname, '../package.json'), 'utf-8')
 )
 
-const CONTACT_DEV_ZYU = `请联系开发者VincentZyu。加QQ群:259248174`;
-
 export const usage = `
 <h2>🎯 插件版本：v${pkg.version}</h2>
 <p>插件使用问题 / Bug反馈 / 插件开发交流，欢迎加入QQ群：<b>259248174</b></p>
@@ -81,7 +79,7 @@ export const Config: Schema<Config> = Schema.intersect([
       .role('radio')
       .default(ONEBOT_IMPL_NAME.LAGRNAGE)
       .description('【重要】OneBot 的具体实现名称(选错了会导致获取到的内容会变少)'),
-  }),
+  }).description('你的OneBot具体实现平台 是哪一个捏？'),
 
   Schema.object({
     enableUserInfoCommand: Schema.boolean()

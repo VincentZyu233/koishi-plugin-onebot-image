@@ -21,6 +21,8 @@ export const IMAGE_TYPES = {
 
 export type ImageType = typeof IMAGE_TYPES[keyof typeof IMAGE_TYPES];
 
+
+
 export const ONEBOT_IMPL_NAME = {
   LAGRNAGE: 'Lagrange',
   NAPCAT: 'NapCat',
