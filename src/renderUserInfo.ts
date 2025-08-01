@@ -146,15 +146,15 @@ const getSourceHanSerifSCStyleUserInfoHtmlStr = async (userInfo, contextInfo, av
         .avatar:hover{transform:scale(1.08);}
         .nickname{font-size:36px;font-weight:800;margin-bottom:12px;color:#111;word-break:break-word;text-shadow:0 3px 6px rgba(255,255,255,.7);background:rgba(255,255,255,.25);padding:14px 28px;border-radius:20px;border:1px solid rgba(255,255,255,.5);letter-spacing:.5px;}
         .userid{font-size:20px;color:#555;background:rgba(255,255,255,.4);padding:12px 20px;border-radius:16px;border:1px solid rgba(255,255,255,.6);margin-bottom:18px;font-weight:600;text-shadow:0 1px 2px rgba(255,255,255,.8);}
-        .group-info-container{width:100%;padding:10px 10px;display:flex;flex-direction:column;align-items:center;gap:8px;background:rgba(255,255,255,.2);border-top:1px solid rgba(255,255,255,.3);border-bottom-left-radius:25px;border-bottom-right-radius:25px;box-sizing:border-box;min-height:100px;overflow:hidden;margin-top:auto;}
+        .group-info-container{width:100%;padding:10px 10px;display:flex;flex-direction:column;align-items:center;gap:5px;background:rgba(255,255,255,.2);border-top:1px solid rgba(255,255,255,.3);border-bottom-left-radius:25px;border-bottom-right-radius:25px;box-sizing:border-box;min-height:100px;margin-top:auto;}
         .group-info-header{display:flex;align-items:center;gap:15px;margin-bottom:10px;}
         .group-avatar-wrapper{display:flex;align-items:center;gap:10px;}
         .group-avatar{width:80px;height:80px;border-radius:12px;object-fit:cover;border:3px solid rgba(255,255,255,.7);box-shadow:0 6px 16px rgba(0,0,0,.2);}
         .group-name-and-count{display:flex;flex-direction:column;align-items:flex-start;gap:5px;}
-        .group-id, .group-name {font-size:16px;color:#333;background:rgba(255,255,255,.6);padding:6px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.6);font-weight:800;text-shadow:0 1px 3px rgba(255,255,255,.9);line-height:1.2;}
-        .group-member-count{font-size:14px;color:#007bff;font-weight:bold;background:rgba(0,123,255,.1);border:1px solid rgba(0,123,255,.3);border-radius:8px;padding:4px 8px;margin-top:5px;}
-        .group-info-body{width:100%;display:flex;flex-direction:column;gap:6px;}
-        .group-info-container .info-item{width:100%;box-sizing:border-box;padding:4px 7px;background:rgba(255,255,255,.5);border-radius:10px;white-space:normal;overflow:visible;text-overflow:clip;min-height:auto;}
+        .group-id, .group-name {font-size:15px;color:#333;background:rgba(255,255,255,.6);padding:6px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.6);font-weight:800;text-shadow:0 1px 3px rgba(255,255,255,.9);line-height:1.02;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;}
+        .group-member-count{font-size:13px;color:#007bff;font-weight:bold;background:rgba(0,123,255,.1);border:1px solid rgba(0,123,255,.3);border-radius:8px;padding:4px 8px;margin-top:2px;}
+        .group-info-body{width:100%;display:flex;flex-direction:column;gap:5px;}
+        .group-info-container .info-item{width:100%;box-sizing:border-box;padding:4px 7px;background:rgba(255,255,255,.5);border-radius:10px;white-space:normal;overflow:visible;text-overflow:visible;min-height:auto;}
         .group-info-container .info-label{margin-bottom:2px;font-size:10px;color:#666;font-weight:500;text-shadow:0 1px 2px rgba(255,255,255,.9);}
         .group-info-container .info-value{font-size:13px;line-height:1.3;color:#212121;color:rgb(3,3,3,.9);word-break:break-all;text-shadow:0 1px 2px rgba(255,255,255,.8);line-height:1.3;}
         .group-level-role-row,.group-time-row{display:flex;gap:6px;width:100%;}
