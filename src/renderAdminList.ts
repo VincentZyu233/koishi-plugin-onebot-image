@@ -5,9 +5,9 @@ import { } from 'koishi-plugin-puppeteer'; // 引入 puppeteer 类型，但不�
 import { IMAGE_STYLES, FONT_FILES, type ImageStyle, ImageType, UnifiedAdminInfo, UnifiedContextInfo } from './type';
 import { generateTimestamp, getGroupAvatarBase64, getFontBase64 } from './utils';
 
-export const inject = {
-    required: ["puppeteer", "http"]
-}
+// export const inject = {
+//     required: ["puppeteer", "http"]
+// }
 
 const generateAdminListItems = (admins: UnifiedAdminInfo[]) => {
     return admins.map((admin, index) => `

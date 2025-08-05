@@ -16,3 +16,7 @@ tsconfig.tsbuildinfo
 *.ntvs*
 *.njsproj
 *.sln
+
+# Font files
+assets/*.ttf
+assets/*.otf

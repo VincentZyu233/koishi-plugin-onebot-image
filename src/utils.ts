@@ -1,5 +1,5 @@
 import { Context } from 'koishi';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { FONT_FILES, type ImageStyle } from './type';
 
@@ -39,6 +39,7 @@ export async function getGroupAvatarBase64(ctx: Context, groupId: string): Promi
     }
 }
 
+
 /**
  * 获取字体文件的 Base64 编码
  * @param ctx Koishi Context 实例
@@ -54,5 +55,54 @@ export async function getFontBase64(ctx: Context, imageStyle: ImageStyle): Promi
     } catch (error) {
         ctx.logger.warn(`获取字体文件失败: ${error.message}`);
         return '';
+    }
+}
+
+
+/**
+ * 验证并下载字体文件
+ * @param ctx Koishi Context 实例
+ * @returns Promise<void>
+ */
+export async function validateFonts(ctx: Context): Promise<void> {
+    const assetsDir = join(__dirname, '..', 'assets');
+    
+    // 确保assets目录存在
+    if (!existsSync(assetsDir)) {
+        mkdirSync(assetsDir, { recursive: true });
+    }
+    
+    const fontConfigs = [
+        {
+            filename: 'LXGWWenKaiMono-Regular.ttf',
+            downloadUrl: 'https://gitee.com/vincent-zyu/koishi-plugin-onebot-image/releases/download/font/LXGWWenKaiMono-Regular.ttf'
+        },
+        {
+            filename: 'SourceHanSerifSC-Medium.otf',
+            downloadUrl: 'https://gitee.com/vincent-zyu/koishi-plugin-onebot-image/releases/download/font/SourceHanSerifSC-Medium.otf'
+        }
+    ];
+    
+    for (const fontConfig of fontConfigs) {
+        const fontPath = join(assetsDir, fontConfig.filename);
+        
+        // 检查字体文件是否存在
+        if (!existsSync(fontPath)) {
+            ctx.logger.info(`字体文件 ${fontConfig.filename} 不存在，开始下载...`);
+            
+            try {
+                // 下载字体文件
+                const response = await ctx.http.get(fontConfig.downloadUrl, { responseType: 'arraybuffer' });
+                const fontBuffer = Buffer.from(response);
+                
+                // 保存字体文件
+                writeFileSync(fontPath, fontBuffer);
+                ctx.logger.info(`字体文件 ${fontConfig.filename} 下载完成`);
+            } catch (error) {
+                ctx.logger.error(`下载字体文件 ${fontConfig.filename} 失败: ${error.message}`);
+            }
+        } else {
+            ctx.logger.debug(`字体文件 ${fontConfig.filename} 已存在`);
+        }
     }
 }

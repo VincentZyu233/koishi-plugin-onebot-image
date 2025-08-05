@@ -8,8 +8,13 @@ import { IMAGE_STYLES, type ImageStyle, IMAGE_TYPES, type ImageType, ONEBOT_IMPL
 import { renderUserInfo } from './renderUserInfo'
 import { renderAdminList } from './renderAdminList'
 import { convertToUnifiedUserInfo, convertToUnifiedAdminInfo, convertToUnifiedContextInfo, UnifiedUserInfo, UnifiedAdminInfo, UnifiedContextInfo } from './type'
+import { validateFonts } from './utils'
 
 export const name = 'onebot-info-image'
+
+export const inject = {
+    required: ["puppeteer", "http"]
+}
 
 const pkg = JSON.parse(
   readFileSync(resolve(__dirname, '../package.json'), 'utf-8')
@@ -159,11 +164,12 @@ export const Config: Schema<Config> = Schema.intersect([
 
 ]);
 
-export const inject = {
-    required: ["puppeteer", "http"] // 确保注入 puppeteer 和 http
-}
 
 export function apply(ctx: Context, config: Config) {
+  // 验证并下载字体文件
+  validateFonts(ctx).catch(error => {
+    ctx.logger.error(`字体文件验证失败: ${error.message}`);
+  });
 
   //帮助文本中的 结果信息格式
   const responseHint = [
