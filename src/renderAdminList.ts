@@ -5,10 +5,6 @@ import { } from 'koishi-plugin-puppeteer'; // 引入 puppeteer 类型，但不�
 import { IMAGE_STYLES, FONT_FILES, type ImageStyle, ImageType, UnifiedAdminInfo, UnifiedContextInfo } from './type';
 import { generateTimestamp, getGroupAvatarBase64, getFontBase64 } from './utils';
 
-// export const inject = {
-//     required: ["puppeteer", "http"]
-// }
-
 const generateAdminListItems = (admins: UnifiedAdminInfo[]) => {
     return admins.map((admin, index) => `
         <div class="admin-item">
@@ -332,6 +328,8 @@ export async function renderAdminList(
     imageType: ImageType,
     screenshotQuality: number,
 ): Promise<string> {
+    const browserPage = await ctx.puppeteer.page();
+
     // 排序管理员列表：群主排在第一位，其余管理员按群昵称（若无则按用户名）的字典序升序排列
     admins.sort((a, b) => {
         if (a.role === 'owner') return -1;
@@ -372,13 +370,12 @@ export async function renderAdminList(
         }
 
         // 使用 Puppeteer 渲染 HTML 为图片
-        const page = await ctx.puppeteer.page();
-        await page.setContent(htmlContent);
+        browserPage.setContent(htmlContent);
 
         // 等待页面完全加载，特别是图片和字体
-        await page.waitForSelector('body', { timeout: 5000 });
+        await browserPage.waitForSelector('body', {timeout: 5000})
         // 等待所有图片加载完成，防止截图时图片还没显示
-        await page.evaluate(() => {
+        await browserPage.evaluate(() => {
             const images = Array.from(document.querySelectorAll('img'));
             return Promise.all(images.filter(img => !img.complete).map(img => new Promise(resolve => {
                 img.onload = img.onerror = resolve;
@@ -386,12 +383,12 @@ export async function renderAdminList(
         });
 
         // 获取body元素的边界框
-        const bodyElement = await page.$('body');
+        const bodyElement = await browserPage.$('body');
         // 使用element.evaluateHandle和element.getProperty来获取实际的scrollHeight和scrollWidth
         const boundingBox = await bodyElement.boundingBox();
 
         // 截取body元素的精确区域，避免白边
-        const screenshotBuffer = await page.screenshot({
+        const screenshotBuffer = await browserPage.screenshot({
             encoding: 'base64',
             type: 'png',
             clip: {
@@ -402,11 +399,11 @@ export async function renderAdminList(
             }
         });
 
-        await page.close();
-
         return screenshotBuffer;
     } catch (error) {
         ctx.logger.error(`渲染管理员列表图片失败: ${error}`);
         throw error;
+    } finally {
+        await browserPage.close();
     }
 }

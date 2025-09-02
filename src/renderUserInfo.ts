@@ -5,10 +5,6 @@ import { } from 'koishi-plugin-puppeteer'; // 引入 puppeteer 类型，但不�
 import { IMAGE_STYLES, FONT_FILES, type ImageStyle, ImageType, UnifiedUserInfo, UnifiedContextInfo } from './type';
 import { generateTimestamp, getGroupAvatarBase64, getFontBase64 } from './utils';
 
-export const inject = {
-    required: ["puppeteer", "http"]
-}
-
 const formatMsTimestamp = (timestamp) => {
     if (!timestamp) return '<span class="unknown">未知</span>';
     const date = new Date(timestamp);
@@ -21,8 +17,6 @@ const getSourceHanSerifSCStyleUserInfoHtmlStr = async (userInfo, contextInfo, av
     const backgroundStyle = avatarBase64
         ? `background-image: url(data:image/jpeg;base64,${avatarBase64});`
         : `background-color: #f0f2f5;`;
-
- 
 
     const getValue = (value, fallback = '<span class="unknown">未知</span>') => value && value !== '-' ? value : fallback;
 
