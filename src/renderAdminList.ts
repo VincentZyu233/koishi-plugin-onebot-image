@@ -369,12 +369,17 @@ export async function renderAdminList(
             throw new Error(`不支持的图片样式: ${imageStyle}`);
         }
 
-        // 使用 Puppeteer 渲染 HTML 为图片
-        browserPage.setContent(htmlContent);
+        await browserPage.setContent(htmlContent);
 
-        // 等待页面完全加载，特别是图片和字体
-        await browserPage.waitForSelector('body', {timeout: 5000})
+        await browserPage.waitForSelector('body', { timeout: 15000 });
+
+        // await browserPage.setContent(htmlContent, {
+        //     // 等待网络空闲，确保所有资源（图片、字体等）都已加载
+        //     waitUntil: 'networkidle0'
+        // });
+        // // 等待所有图片加载完成，防止截图时图片还没显示
         // 等待所有图片加载完成，防止截图时图片还没显示
+        
         await browserPage.evaluate(() => {
             const images = Array.from(document.querySelectorAll('img'));
             return Promise.all(images.filter(img => !img.complete).map(img => new Promise(resolve => {
