@@ -8,9 +8,11 @@
 
 #### Napcat平台渲染效果:
 ##### 用户信息：
-![alt text](docs/napcat_aui.png)
+![napcat_aui_source](https://gitee.com/vincent-zyu/koishi-plugin-onebot-image/releases/download/example_image/napcat_aui_source.png)
+![napcat_aui_lxgw](https://gitee.com/vincent-zyu/koishi-plugin-onebot-image/releases/download/example_image/napcat_aui_lxgw.png)
 ##### 群管理列表：
-![alt text](docs/napcat_al.png)
+![napcat_al_source](https://gitee.com/vincent-zyu/koishi-plugin-onebot-image/releases/download/example_image/napcat_al_source.png)
+![napcat_al_lxgw](https://gitee.com/vincent-zyu/koishi-plugin-onebot-image/releases/download/example_image/napcat_al_lxgw.png)
 
 ## dev 
 ### 查看git大文件
@@ -39,7 +41,7 @@ yarn
 
 
 ```shell
-# ensure plugin dir name is onebot-info-image, then:
+# ensure plugin dir name is *onebot-info-image*, without koishi-plugin prefix then:
 cd G:\GGames\Minecraft\shuyeyun\qq-bot\koishi-dev\koishi-dev-3
 yarn
 yarn dev
@@ -51,7 +53,7 @@ Invoke-WebRequest -Uri "https://www.google.com" -Method Head -UseBasicParsing
 npm login --registry https://registry.npmjs.org
 # login npm in browser
 npm run pub onebot-info-image -- --registry https://registry.npmjs.org
-npm dist-tag add koishi-plugin-onebot-info-image@0.2.0-alpha.5+20250929 latest --registry https://registry.npmjs.org
+npm dist-tag add koishi-plugin-onebot-info-image@0.2.0-alpha.9+20250929 latest --registry https://registry.npmjs.org
 
 npm view koishi-plugin-onebot-info-image
 npm-stat.com
