@@ -435,12 +435,6 @@ export async function renderUserInfo(
 
         await browserPage.waitForSelector('body', { timeout: 15000 });
 
-        // await browserPage.setContent(htmlContent, {
-        //     // 等待网络空闲，确保所有资源（图片、字体等）都已加载
-        //     waitUntil: 'networkidle0'
-        // });
-        // // 等待所有图片加载完成，防止截图时图片还没显示
-
         // 等待图片加载完成（如果 avatar 是远程图片）
         await browserPage.evaluate(async () => {
             const images = Array.from(document.querySelectorAll('img'));
@@ -452,6 +446,26 @@ export async function renderUserInfo(
                 });
             }));
         });
+
+        // todo: 把三种等待的逻辑添加到配置项 让用户选择
+
+        // PLAN B:
+        // await browserPage.setContent(htmlContent, {
+        //     // 等待网络空闲，确保所有资源（图片、字体等）都已加载
+        //     waitUntil: 'networkidle0',
+        //     timeout: 15000, // 例如，设置超时为15秒
+        // });
+        // 等待所有图片加载完成，防止截图时图片还没显示
+
+        // PLAN C:
+        // await browserPage.setContent(htmlContent, {
+        //     // 只需等待DOM内容加载完毕
+        //     waitUntil: 'domcontentloaded',
+        // });
+
+        // // 因为字体是以 base64 嵌入的，浏览器需要一些时间来解析和应用
+        // // 我们可以使用一个短暂的延迟来确保字体渲染完成
+        // await browserPage.waitForTimeout(500); // 延迟500毫秒，可根据需要调整
 
         // 截图指定尺寸的区域，确保是正方形
         const screenshotBuffer = await browserPage.screenshot({

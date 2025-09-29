@@ -373,13 +373,6 @@ export async function renderAdminList(
 
         await browserPage.waitForSelector('body', { timeout: 15000 });
 
-        // await browserPage.setContent(htmlContent, {
-        //     // 等待网络空闲，确保所有资源（图片、字体等）都已加载
-        //     waitUntil: 'networkidle0'
-        // });
-        // // 等待所有图片加载完成，防止截图时图片还没显示
-        // 等待所有图片加载完成，防止截图时图片还没显示
-        
         await browserPage.evaluate(() => {
             const images = Array.from(document.querySelectorAll('img'));
             return Promise.all(images.filter(img => !img.complete).map(img => new Promise(resolve => {
