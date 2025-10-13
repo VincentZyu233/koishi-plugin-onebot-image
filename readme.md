@@ -53,7 +53,7 @@ Invoke-WebRequest -Uri "https://www.google.com" -Method Head -UseBasicParsing
 npm login --registry https://registry.npmjs.org
 # login npm in browser
 npm run pub onebot-info-image -- --registry https://registry.npmjs.org
-npm dist-tag add koishi-plugin-onebot-info-image@0.2.0-alpha.9+20250929 latest --registry https://registry.npmjs.org
+npm dist-tag add koishi-plugin-onebot-info-image@0.2.0-alpha.10+20250929 latest --registry https://registry.npmjs.org
 
 npm view koishi-plugin-onebot-info-image
 npm-stat.com

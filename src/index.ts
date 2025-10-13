@@ -283,10 +283,11 @@ export function apply(ctx: Context, config: Config) {
           // }
         } else if ( config.onebotImplName === ONEBOT_IMPL_NAME.NAPCAT ){
           const ncUserStatusObj = await session.onebot._request('nc_get_user_status', { user_id: targetUserId });
+          const napcatStatusData = ncUserStatusObj?.data ?? null;
           // ctx.logger.info(`[napcat独有]: ncUserStatusObj = \n\t ${JSON.stringify(ncUserStatusObj)}`);
           userInfoArg.status = {
             napcat_origin: ncUserStatusObj,
-            message: getNapcatQQStatusText(ncUserStatusObj?.data.status, ncUserStatusObj?.data.ext_status)
+            message: getNapcatQQStatusText(napcatStatusData?.status, napcatStatusData?.ext_status)
           }
           // ctx.logger.info(`[napcat独有]: userInfoArg.status = \n\t ${JSON.stringify(userInfoArg.status)}`);
         } 
