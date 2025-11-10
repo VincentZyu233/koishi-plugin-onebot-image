@@ -1,15 +1,20 @@
 export const IMAGE_STYLES = {
   SOURCE_HAN_SERIF_SC: '思源宋体SourceHanSerifSC',
-  LXGW_WENKAI: '落霞孤鹜文楷LXGWWenKai'
+  LXGW_WENKAI: '落霞孤鹜文楷LXGWWenKai',
+  FLAT_MINIMAL: '扁平化简约FlatMinimal'
 } as const;
 
 // 样式类型定义
 export type ImageStyle = typeof IMAGE_STYLES[keyof typeof IMAGE_STYLES];
+export type ImageStyleKey = keyof typeof IMAGE_STYLES;
+
+export const IMAGE_STYLE_KEY_ARR = Object.keys(IMAGE_STYLES) as ImageStyleKey[];
 
 // 字体文件映射
 export const FONT_FILES = {
   [IMAGE_STYLES.SOURCE_HAN_SERIF_SC]: 'SourceHanSerifSC-Medium.otf',
-  [IMAGE_STYLES.LXGW_WENKAI]: 'LXGWWenKaiMono-Regular.ttf'
+  [IMAGE_STYLES.LXGW_WENKAI]: 'LXGWWenKaiMono-Regular.ttf',
+  [IMAGE_STYLES.FLAT_MINIMAL]: 'LXGWWenKaiMono-Regular.ttf' // 扁平化样式使用文楷字体
 } as const;
 
 

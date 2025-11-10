@@ -209,6 +209,444 @@ const getSourceHanSerifSCStyleUserInfoHtmlStr = async (userInfo, contextInfo, av
 };
 
 
+const getFlatMinimalUserInfoHtmlStr = async (userInfo, contextInfo, avatarBase64, groupAvatarBase64, fontBase64, enableDarkMode) => {
+    const isGroup = contextInfo.isGroup;
+    const isDarkMode = enableDarkMode;
+    const timestamp = new Date().toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    });
+
+    // 扁平化配色方案
+    const colors = isDarkMode ? {
+        // 黑色背景配色：亮蓝、亮绿、亮橙
+        background: '#000000',
+        cardBackground: '#1a1a1a',
+        textPrimary: '#ffffff',
+        textSecondary: '#cccccc',
+        primary: '#00d4ff',      // 亮蓝色
+        secondary: '#00ff88',    // 亮绿色
+        accent: '#ff8800',       // 亮橙色
+        border: '#333333',
+        hover: '#2a2a2a'
+    } : {
+        // 白色背景配色：黑、蓝、灰
+        background: '#ffffff',
+        cardBackground: '#f8f9fa',
+        textPrimary: '#2c3e50',  // 深蓝灰
+        textSecondary: '#6c757d', // 中性灰
+        primary: '#007bff',      // 蓝色
+        secondary: '#34495e',    // 深灰蓝
+        accent: '#6c757d',       // 灰色
+        border: '#e9ecef',
+        hover: '#f1f3f4'
+    };
+
+    const getShengXiao = num => (['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'][num] || '');
+    const getConstellation = num => (['摩羯座', '水瓶座', '双鱼座', '白羊座', '金牛座', '双子座', '巨蟹座', '狮子座', '处女座', '天秤座', '天蝎座', '射手座'][num - 1] || '');
+    const getBloodType = num => (['O', 'A', 'B', 'AB'][num] || '');
+
+    const formatAddress = (user) => {
+        const parts = [user.country, user.province, user.city, user.postCode].filter(part => part && part !== '0' && part !== '-');
+        let locationStr = parts.length > 0 ? parts.join('-') : '';
+        if (user.address && user.address !== locationStr) {
+            locationStr = locationStr ? `${locationStr} ${user.address}` : user.address;
+        }
+        return locationStr || '<span class="unknown">未知</span>';
+    };
+
+    const getGroupRole = (role) => {
+        switch (role) {
+            case 'owner':
+                return '群主';
+            case 'admin':
+                return '管理员';
+            case 'member':
+                return '成员';
+            default:
+                return '<span class="unknown">未知</span>';
+        }
+    };
+    
+    return `<!DOCTYPE html><html><head><style>
+${fontBase64 ? `@font-face{font-family:'CustomFont';src:url('data:font/truetype;charset=utf-8;base64,${fontBase64}') format('truetype');font-weight:400;font-style:normal;font-display:swap;}` : ''}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: ${fontBase64 ? "'CustomFont'," : ''} -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: ${colors.background};
+    color: ${colors.textPrimary};
+    width: 999px;
+    height: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    overflow: hidden;
+}
+.main-container {
+    width: 100%;
+    max-width: 920px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+.header {
+    background: ${colors.cardBackground};
+    border: 2px solid ${colors.border};
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,${isDarkMode ? '0.3' : '0.1'});
+}
+.title {
+    font-size: 28px;
+    font-weight: 700;
+    color: ${colors.primary};
+    margin-bottom: 8px;
+}
+.subtitle {
+    font-size: 16px;
+    color: ${colors.textSecondary};
+}
+.content {
+    display: flex;
+    gap: 24px;
+    flex: 1;
+    min-height: 0;
+}
+.left-panel {
+    flex: 0 0 280px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+.avatar-card {
+    background: ${colors.cardBackground};
+    border: 2px solid ${colors.border};
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,${isDarkMode ? '0.3' : '0.1'});
+}
+.avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 60px;
+    object-fit: cover;
+    border: 3px solid ${colors.primary};
+    margin-bottom: 16px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+.avatar-placeholder {
+    width: 120px;
+    height: 120px;
+    border-radius: 60px;
+    background: linear-gradient(45deg, ${colors.primary}, ${colors.secondary});
+    margin-bottom: 16px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.user-name {
+    font-size: 20px;
+    font-weight: 600;
+    color: ${colors.textPrimary};
+    margin-bottom: 8px;
+}
+.user-id {
+    font-size: 14px;
+    color: ${colors.textSecondary};
+    background: ${colors.primary}20;
+    padding: 6px 12px;
+    border-radius: 12px;
+    display: inline-block;
+}
+.group-card {
+    background: ${colors.cardBackground};
+    border: 2px solid ${colors.border};
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,${isDarkMode ? '0.3' : '0.1'});
+}
+.group-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+.group-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    object-fit: cover;
+    border: 2px solid ${colors.secondary};
+}
+.group-info {
+    flex: 1;
+}
+.group-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: ${colors.textPrimary};
+    margin-bottom: 4px;
+}
+.group-id {
+    font-size: 14px;
+    color: ${colors.textSecondary};
+}
+.group-member-count {
+    font-size: 12px;
+    color: ${colors.accent};
+    margin-top: 4px;
+}
+.group-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+.group-detail-item {
+    text-align: center;
+}
+.group-detail-label {
+    font-size: 12px;
+    color: ${colors.textSecondary};
+    margin-bottom: 4px;
+}
+.group-detail-value {
+    font-size: 14px;
+    color: ${colors.textPrimary};
+    font-weight: 500;
+}
+.right-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+.info-card {
+    background: ${colors.cardBackground};
+    border: 2px solid ${colors.border};
+    border-radius: 16px;
+    padding: 24px;
+    flex: 1;
+    box-shadow: 0 2px 8px rgba(0,0,0,${isDarkMode ? '0.3' : '0.1'});
+    overflow-y: auto;
+}
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+.info-item {
+    background: ${colors.background === '#ffffff' ? '#ffffff' : '#2a2a2a'};
+    border: 1px solid ${colors.border};
+    border-radius: 10px;
+    padding: 6px 12px;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.info-item:hover {
+    background: ${colors.hover};
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,${isDarkMode ? '0.4' : '0.15'});
+}
+.info-item.full-width {
+    grid-column: 1 / -1;
+}
+.info-label {
+    font-size: 13px;
+    color: ${colors.textSecondary};
+    font-weight: 600;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.info-value {
+    font-size: 16px;
+    color: ${colors.textPrimary};
+    font-weight: 500;
+    line-height: 1.3;
+    word-break: break-all;
+}
+.multi-info {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+.multi-info-item {
+    flex: 1;
+    text-align: center;
+}
+.multi-info-item .info-label {
+    margin-bottom: 4px;
+    font-size: 12px;
+}
+.multi-info-item .info-value {
+    font-size: 15px;
+}
+.unknown {
+    color: ${colors.textSecondary};
+    font-style: italic;
+    opacity: 0.7;
+}
+.timestamp {
+    position: fixed;
+    top: 8px;
+    left: 8px;
+    font-size: 11px;
+    color: ${colors.textSecondary};
+    opacity: 0.6;
+    font-family: 'Courier New', monospace;
+    z-index: 1000;
+}
+.primary-accent { color: ${colors.primary}; }
+.secondary-accent { color: ${colors.secondary}; }
+.accent-color { color: ${colors.accent}; }
+</style></head><body>
+<div class="main-container">
+    <div class="header">
+        <div class="title">${isGroup ? '群员信息' : '用户信息'}</div>
+        <div class="subtitle">详细资料</div>
+    </div>
+    
+    <div class="content">
+        <div class="left-panel">
+            <div class="avatar-card">
+                ${avatarBase64 ? 
+                    `<img class="avatar" src="data:image/jpeg;base64,${avatarBase64}" alt="用户头像">` : 
+                    '<div class="avatar-placeholder"></div>'
+                }
+                <div class="user-name">${userInfo.nickname || '未知昵称'}</div>
+                <div class="user-id">QQ: ${userInfo.user_id}</div>
+            </div>
+            
+            ${isGroup ? `
+            <div class="group-card">
+                <div class="group-header">
+                    ${groupAvatarBase64 ? `<img class="group-avatar" src="data:image/jpeg;base64,${groupAvatarBase64}" alt="群头像">` : ''}
+                    <div class="group-info">
+                        <div class="group-name">${contextInfo.groupName || '未知群名'}</div>
+                        <div class="group-id">群号: ${contextInfo.groupId}</div>
+                        ${contextInfo.memberCount ? `<div class="group-member-count">成员: ${contextInfo.memberCount}${contextInfo.maxMemberCount ? `/${contextInfo.maxMemberCount}` : ''}</div>` : ''}
+                    </div>
+                </div>
+                <div class="group-details">
+                    <div class="group-detail-item">
+                        <div class="group-detail-label">群名片</div>
+                        <div class="group-detail-value">${userInfo.card || '未设置'}</div>
+                    </div>
+                    <div class="group-detail-item">
+                        <div class="group-detail-label">群角色</div>
+                        <div class="group-detail-value primary-accent">${getGroupRole(userInfo.role)}</div>
+                    </div>
+                    <div class="group-detail-item">
+                        <div class="group-detail-label">群等级</div>
+                        <div class="group-detail-value secondary-accent">${userInfo.group_level || '未知'}</div>
+                    </div>
+                    <div class="group-detail-item">
+                        <div class="group-detail-label">专属头衔</div>
+                        <div class="group-detail-value accent-color">${userInfo.title || '无'}</div>
+                    </div>
+                </div>
+            </div>
+            ` : ''}
+        </div>
+        
+        <div class="right-panel">
+            <div class="info-card">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">性别</div>
+                        <div class="info-value">${userInfo.sex === 'male' ? '男' : userInfo.sex === 'female' ? '女' : '<span class="unknown">未知</span>'}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">年龄</div>
+                        <div class="info-value">${userInfo.age || '<span class="unknown">未知</span>'}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">QQ等级</div>
+                        <div class="info-value primary-accent">${userInfo.qq_level || userInfo.level || '<span class="unknown">未知</span>'}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">QID</div>
+                        <div class="info-value">${userInfo.q_id || '<span class="unknown">未知</span>'}</div>
+                    </div>
+                    
+                    ${userInfo.sign || userInfo.longNick ? `
+                    <div class="info-item full-width">
+                        <div class="info-label">个性签名</div>
+                        <div class="info-value">${userInfo.sign || userInfo.longNick}</div>
+                    </div>
+                    ` : ''}
+                    
+                    ${userInfo.RegisterTime ? `
+                    <div class="info-item full-width">
+                        <div class="info-label">注册时间</div>
+                        <div class="info-value">${new Date(userInfo.RegisterTime).toLocaleString('zh-CN')}</div>
+                    </div>
+                    ` : ''}
+                    
+                    <div class="info-item full-width">
+                        <div class="info-label">邮箱</div>
+                        <div class="info-value">${(userInfo.eMail || userInfo.email) && userInfo.eMail !== '-' ? (userInfo.eMail || userInfo.email) : '<span class="unknown">未知</span>'}</div>
+                    </div>
+                    <div class="info-item full-width">
+                        <div class="info-label">电话</div>
+                        <div class="info-value">${userInfo.phoneNum && userInfo.phoneNum !== '-' ? userInfo.phoneNum : '<span class="unknown">未知</span>'}</div>
+                    </div>
+                    
+                    <div class="info-item full-width">
+                        <div class="info-label">地址信息</div>
+                        <div class="info-value">${formatAddress(userInfo)}</div>
+                    </div>
+                    
+                    <div class="info-item full-width">
+                        <div class="info-label">个人特征</div>
+                        <div class="info-value">生肖: ${getShengXiao(userInfo.shengXiao) || '<span class="unknown">未知</span>'} | 星座: ${getConstellation(userInfo.constellation) || '<span class="unknown">未知</span>'} | 血型: ${getBloodType(userInfo.kBloodType) ? `${getBloodType(userInfo.kBloodType)}型` : '<span class="unknown">未知</span>'}</div>
+                    </div>
+                    
+                    <div class="info-item full-width">
+                        <div class="info-label">生日</div>
+                        <div class="info-value">${(userInfo.birthday_year && userInfo.birthday_month && userInfo.birthday_day) ? `${userInfo.birthday_year}年${userInfo.birthday_month}月${userInfo.birthday_day}日` : '<span class="unknown">未知</span>'}</div>
+                    </div>
+                    
+                    <div class="info-item full-width">
+                        <div class="info-label">VIP信息</div>
+                        <div class="info-value">VIP: ${userInfo.is_vip ? '是' : '否'} | 年费VIP: ${userInfo.is_years_vip ? '是' : '否'} | VIP等级: ${userInfo.vip_level || 0}</div>
+                    </div>
+                    
+                    <div class="info-item full-width">
+                        <div class="info-label">状态</div>
+                        <div class="info-value">${(userInfo.status && userInfo.status.message) || '<span class="unknown">未知</span>'}</div>
+                    </div>
+                    
+                    ${isGroup ? `
+                    <div class="info-item">
+                        <div class="info-label">加群时间</div>
+                        <div class="info-value">${userInfo.join_time ? new Date(userInfo.join_time).toLocaleString('zh-CN') : '<span class="unknown">未知</span>'}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">最后发言</div>
+                        <div class="info-value">${userInfo.last_sent_time ? new Date(userInfo.last_sent_time).toLocaleString('zh-CN') : '<span class="unknown">未知</span>'}</div>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="timestamp">${timestamp}</div>
+</body></html>`;
+};
+
 const getLXGWWenKaiUserInfoHtmlStr = async (userInfo, contextInfo, avatarBase64, groupAvatarBase64, fontBase64, enableDarkMode) => {
     const isGroup = contextInfo.isGroup;
     const isDarkMode = enableDarkMode;
@@ -420,6 +858,8 @@ export async function renderUserInfo(
             htmlContent = await getSourceHanSerifSCStyleUserInfoHtmlStr (userInfo, contextInfo, avatarBase64 || '', groupAvatarBase64 || '', fontBase64 || '', enableDarkMode);
         } else if ( imageStyle === IMAGE_STYLES.LXGW_WENKAI ) {
             htmlContent = await getLXGWWenKaiUserInfoHtmlStr            (userInfo, contextInfo, avatarBase64 || '', groupAvatarBase64 || '', fontBase64 || '', enableDarkMode);
+        } else if ( imageStyle === IMAGE_STYLES.FLAT_MINIMAL ) {
+            htmlContent = await getFlatMinimalUserInfoHtmlStr          (userInfo, contextInfo, avatarBase64 || '', groupAvatarBase64 || '', fontBase64 || '', enableDarkMode);
         }
 
         // 设置页面视口为999x999

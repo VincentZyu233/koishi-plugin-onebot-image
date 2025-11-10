@@ -2,9 +2,10 @@
 import { Context, Schema, h } from 'koishi'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
+import path from 'path'
 import {} from 'koishi-plugin-adapter-onebot';
 
-import { IMAGE_STYLES, type ImageStyle, IMAGE_TYPES, type ImageType, ONEBOT_IMPL_NAME, type OneBotImplName, getNapcatQQStatusText } from './type';
+import { IMAGE_STYLES, type ImageStyle, type ImageStyleKey, IMAGE_STYLE_KEY_ARR, IMAGE_TYPES, type ImageType, ONEBOT_IMPL_NAME, type OneBotImplName, getNapcatQQStatusText } from './type';
 import { renderUserInfo } from './renderUserInfo'
 import { renderAdminList } from './renderAdminList'
 import { convertToUnifiedUserInfo, convertToUnifiedAdminInfo, convertToUnifiedContextInfo, UnifiedUserInfo, UnifiedAdminInfo, UnifiedContextInfo } from './type'
@@ -55,6 +56,10 @@ Napcat能拿到的东西更多， 为了更好的使用体验，推荐使用Napc
 <p>感谢所有开源字体与项目的贡献者 ❤️</p>
 `
 
+export interface ImageStyleDetail {
+  styleKey: ImageStyleKey;
+  darkMode: boolean;
+}
 
 export interface Config {
   onebotImplName: OneBotImplName;
@@ -63,14 +68,14 @@ export interface Config {
   userinfoCommandName: string;
   enableGroupAdminListCommand: boolean;
   groupAdminListCommandName: string;
+  inspectStyleCommandName: string;
 
   sendText: boolean;
   enableQuoteWithText: boolean;
 
   sendImage: boolean;
   enableQuoteWithImage: boolean
-  imageStyle: ImageStyle;
-  enableDarkMode: boolean;
+  imageStyleDetails: ImageStyleDetail[];
   imageType: ImageType;
   screenshotQuality: number;
 
@@ -104,6 +109,9 @@ export const Config: Schema<Config> = Schema.intersect([
     groupAdminListCommandName: Schema.string()
       .default('群管理列表')
       .description('👥 群管理员列表命令名称。'),
+    inspectStyleCommandName: Schema.string()
+      .default('查看图片样式')
+      .description('🎨 查看图片样式列表命令名称。'),
   }).description('基础配置 ⚙️'),
 
   Schema.object({
@@ -122,16 +130,46 @@ export const Config: Schema<Config> = Schema.intersect([
     enableQuoteWithImage: Schema.boolean()
       .default(false)
       .description('📸 回复图片的时候，是否带引用触发指令的消息。'),
-    imageStyle: Schema.union([
-      Schema.const(IMAGE_STYLES.SOURCE_HAN_SERIF_SC).description('✨ 现代风格，使用SourceHanSerifSC 思源宋体'),
-      Schema.const(IMAGE_STYLES.LXGW_WENKAI).description('📜 简洁古风，使用LXGWWenKai 字体'),
-    ])
-      .role('radio')
-      .default(IMAGE_STYLES.SOURCE_HAN_SERIF_SC)
-      .description("🎨 渲染图片的风格与字体。"),
-    enableDarkMode: Schema.boolean()
-      .default(false)
-      .description('🌙 是否启用暗黑模式。'),
+    imageStyleDetails: Schema
+      .array(
+        Schema.object({
+          styleKey: Schema
+            .union(IMAGE_STYLE_KEY_ARR.map((key) => Schema.const(key).description(IMAGE_STYLES[key])))
+            .role('radio')
+            .description("🎨 图片样式"),
+          darkMode: Schema
+            .boolean()
+            .description("🌙 启用深色模式"),
+        })
+      )
+      .role('table')
+      .default([
+        {
+          styleKey: IMAGE_STYLE_KEY_ARR[0],
+          darkMode: false,
+        },
+        {
+          styleKey: IMAGE_STYLE_KEY_ARR[0],
+          darkMode: true,
+        },
+        {
+          styleKey: IMAGE_STYLE_KEY_ARR[1],
+          darkMode: false,
+        },
+        {
+          styleKey: IMAGE_STYLE_KEY_ARR[1],
+          darkMode: true,
+        },
+        {
+          styleKey: IMAGE_STYLE_KEY_ARR[2],
+          darkMode: false,
+        },
+        {
+          styleKey: IMAGE_STYLE_KEY_ARR[2],
+          darkMode: true,
+        },
+      ])
+      .description("� 图片样式配置。第一行是默认使用的样式，指定样式请使用 -i 参数"),
     imageType: Schema.union([
       Schema.const(IMAGE_TYPES.PNG).description(`🖼️ ${IMAGE_TYPES.PNG}, ❌ 不支持调整quality`),
       Schema.const(IMAGE_TYPES.JPEG).description(`🌄 ${IMAGE_TYPES.JPEG}, ✅ 支持调整quality`),
@@ -178,13 +216,50 @@ export function apply(ctx: Context, config: Config) {
     config.sendForward && '合并转发消息'
   ].filter(Boolean).join('、');
 
+  // 注册 ais 指令 - 查看图片样式列表
+  ctx.command(config.inspectStyleCommandName, "查看图片样式列表")
+    .alias('ais')
+    .alias("awa_inspect_style")
+    .action(async ({ session }) => {
+      let msg = '用户信息图片样式列表：\n';
+      for (let i = 0; i < config.imageStyleDetails.length; i++) {
+        const o = config.imageStyleDetails[i];
+        msg += `\t【${i}】: ${IMAGE_STYLES[o.styleKey]} ${o.darkMode ? '深色模式' : '浅色模式'} (${o.styleKey})\n`;
+      }
+      await session.send(msg);
+    });
+
   if ( config.enableUserInfoCommand ) 
     ctx.command(config.userinfoCommandName, `获取用户信息, 发送${responseHint}`)
       .alias('aui')
       .alias("awa_user_info")
-      .action( async ( {session} ) => {
+      .option("imageStyleIdx", "-i, --idx, --index <idx:number> 图片样式索引")
+      .action( async ( {session, options} ) => {
         if ( !session.onebot )
           return session.send("[error]当前会话不支持onebot协议。");
+
+        // 选择图片样式
+        const IMAGE_STYLE_VALUES = Object.values(IMAGE_STYLES);
+        const defaultStyleDetailObj = config.imageStyleDetails.length > 0 
+          ? config.imageStyleDetails[0] 
+          : { styleKey: IMAGE_STYLE_KEY_ARR[0], darkMode: false };
+        
+        let selectedStyleDetailObj = defaultStyleDetailObj;
+        if (options.imageStyleIdx !== undefined) {
+          const isIdxValid = (options.imageStyleIdx as number) >= 0
+            && (options.imageStyleIdx as number) < config.imageStyleDetails.length;
+          if (!isIdxValid) {
+            let idxInvalidMsgArr = [
+              `图片样式索引不合法。`,
+              `\t 合法范围：[0, ${config.imageStyleDetails.length - 1}]双闭区间。`,
+              `\t 当前输入：${options.imageStyleIdx}`,
+              `\n`,
+              `输入指令 ${config.inspectStyleCommandName} 查看图片样式列表。`
+            ];
+            return await session.send(idxInvalidMsgArr.join('\n'));
+          }
+          selectedStyleDetailObj = config.imageStyleDetails[options.imageStyleIdx as number];
+        }
 
         let targetUserId = session.userId;
         // 检查是否有 @ 用户
@@ -325,7 +400,9 @@ export function apply(ctx: Context, config: Config) {
 
           if (config.sendImage){
             const waitTipMsgId = await session.send(`${h.quote(session.messageId)}🔄正在渲染用户信息图片，请稍候⏳...`);
-            const userInfoimageBase64 = await renderUserInfo(ctx, unifiedUserInfo, unifiedContextInfo, config.imageStyle, config.enableDarkMode, config.imageType, config.screenshotQuality);
+            const selectedImageStyle = IMAGE_STYLES[selectedStyleDetailObj.styleKey];
+            const selectedDarkMode = selectedStyleDetailObj.darkMode;
+            const userInfoimageBase64 = await renderUserInfo(ctx, unifiedUserInfo, unifiedContextInfo, selectedImageStyle, selectedDarkMode, config.imageType, config.screenshotQuality);
             await session.send(`${config.enableQuoteWithImage ? h.quote(session.messageId) : ''}${h.image(`data:image/png;base64,${userInfoimageBase64}`)}`);
             await session.bot.deleteMessage(session.guildId, String(waitTipMsgId));
           }
@@ -347,12 +424,36 @@ export function apply(ctx: Context, config: Config) {
     ctx.command(config.groupAdminListCommandName, `获取群管理员列表, 发送${responseHint}`)
       .alias('al')
       .alias("awa_group_admin_list")
+      .option("imageStyleIdx", "-i, --idx, --index <idx:number> 图片样式索引")
       .action( async ( {session, options} ) => {
         if ( !session.onebot )
           return session.send("[error]当前会话不支持onebot协议。");
 
         if ( !session.guildId )
           return session.send("[error]当前会话不在群聊中。");
+
+        // 选择图片样式
+        const IMAGE_STYLE_VALUES = Object.values(IMAGE_STYLES);
+        const defaultStyleDetailObj = config.imageStyleDetails.length > 0 
+          ? config.imageStyleDetails[0] 
+          : { styleKey: IMAGE_STYLE_KEY_ARR[0], darkMode: false };
+        
+        let selectedStyleDetailObj = defaultStyleDetailObj;
+        if (options.imageStyleIdx !== undefined) {
+          const isIdxValid = (options.imageStyleIdx as number) >= 0
+            && (options.imageStyleIdx as number) < config.imageStyleDetails.length;
+          if (!isIdxValid) {
+            let idxInvalidMsgArr = [
+              `图片样式索引不合法。`,
+              `\t 合法范围：[0, ${config.imageStyleDetails.length - 1}]双闭区间。`,
+              `\t 当前输入：${options.imageStyleIdx}`,
+              `\n`,
+              `输入指令 ${config.inspectStyleCommandName} 查看图片样式列表。`
+            ];
+            return await session.send(idxInvalidMsgArr.join('\n'));
+          }
+          selectedStyleDetailObj = config.imageStyleDetails[options.imageStyleIdx as number];
+        }
 
         try {
           const groupMemberListObj = await session.onebot.getGroupMemberList(session.guildId);
@@ -421,7 +522,9 @@ export function apply(ctx: Context, config: Config) {
             ctx.logger.info(`context info = ${JSON.stringify(contextInfo)}`)
             const waitTipMsgId = await session.send(`${h.quote(session.messageId)}🔄正在渲染群管理员列表图片，请稍候⏳...`);
             const unifiedContextInfo = convertToUnifiedContextInfo(contextInfo, config.onebotImplName);
-            const adminListImageBase64 = await renderAdminList(ctx, adminListArg, unifiedContextInfo, config.imageStyle, config.enableDarkMode, config.imageType, config.screenshotQuality);
+            const selectedImageStyle = IMAGE_STYLES[selectedStyleDetailObj.styleKey];
+            const selectedDarkMode = selectedStyleDetailObj.darkMode;
+            const adminListImageBase64 = await renderAdminList(ctx, adminListArg, unifiedContextInfo, selectedImageStyle, selectedDarkMode, config.imageType, config.screenshotQuality);
             await session.send(`${config.enableQuoteWithImage ? h.quote(session.messageId) : ''}${h.image(`data:image/png;base64,${adminListImageBase64}`)}`);
             await session.bot.deleteMessage(session.guildId, String(waitTipMsgId));
           }

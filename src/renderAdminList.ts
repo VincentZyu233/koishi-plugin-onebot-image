@@ -170,7 +170,7 @@ const getSourceHanSerifSCStyleAdminListHtmlStr = async (admins: UnifiedAdminInfo
 </html>`;
 };
 
-const getLXGWWenKaiAdminListHtmlStr = async (admins: UnifiedAdminInfo[], contextInfo: UnifiedContextInfo, groupAvatarBase64: string, fontBase64: string, enableDarkMode: boolean) => {
+const getLXGWWenKaiAdminListHtmlStr = async (admins: UnifiedAdminInfo[], contextInfo: UnifiedContextInfo, groupAvatarBase64: string, fontBase64: string, enableDarkMode: boolean): Promise<string> => {
     // 调整背景样式为 cover，并居中
     const backgroundStyle = groupAvatarBase64
         ? `background-image: linear-gradient(45deg, rgba(245,240,230,0.85), rgba(250,245,235,0.85)), url(data:image/jpeg;base64,${groupAvatarBase64}); background-size: cover; background-position: center center; background-repeat: no-repeat;`
@@ -318,6 +318,330 @@ const getLXGWWenKaiAdminListHtmlStr = async (admins: UnifiedAdminInfo[], context
 </html>`;
 };
 
+const getFlatMinimalAdminListHtmlStr = async (admins: UnifiedAdminInfo[], contextInfo: UnifiedContextInfo, groupAvatarBase64: string, fontBase64: string, enableDarkMode: boolean) => {
+    const isDarkMode = enableDarkMode;
+    const timestamp = generateTimestamp();
+
+    // 扁平化配色方案
+    const colors = isDarkMode ? {
+        // 深色模式：亮蓝、灰色系
+        background: '#000000',
+        cardBackground: '#1a1a1a',
+        textPrimary: '#ffffff',
+        textSecondary: '#b0b0b0',
+        primary: '#00d4ff',      // 亮蓝色
+        secondary: '#6c757d',    // 灰色
+        accent: '#00ff88',       // 亮绿色
+        border: '#333333',
+        hover: '#2a2a2a',
+        ownerBg: 'rgba(255,140,0,0.2)',
+        ownerText: '#ffa07a',
+        adminBg: 'rgba(0,212,255,0.2)',
+        adminText: '#4da6ff'
+    } : {
+        // 浅色模式：蓝色、黑白灰
+        background: '#f5f7fa',
+        cardBackground: '#ffffff',
+        textPrimary: '#2c3e50',
+        textSecondary: '#6c757d',
+        primary: '#007bff',      // 蓝色
+        secondary: '#34495e',    // 深灰蓝
+        accent: '#28a745',       // 绿色
+        border: '#dee2e6',
+        hover: '#f8f9fa',
+        ownerBg: 'rgba(255,140,0,0.1)',
+        ownerText: '#ff8c00',
+        adminBg: 'rgba(0,123,255,0.1)',
+        adminText: '#007bff'
+    };
+
+    // 生成扁平化样式的管理员列表项
+    const flatAdminListItems = admins.map((admin, index) => `
+        <div class="admin-item">
+            <div class="admin-number">${(index + 1).toString().padStart(2, '0')}</div>
+            <div class="admin-avatar-wrapper">
+                <img src="${admin.avatar || `https://q1.qlogo.cn/g?b=qq&nk=${admin.user_id}&s=640`}" alt="头像" class="admin-avatar" />
+            </div>
+            <div class="admin-info">
+                <div class="admin-name">${admin.nickname || '未知'}</div>
+                <div class="admin-id">
+                    <span class="admin-id-label">QQ:</span>
+                    <span class="admin-id-value">${admin.user_id}</span>
+                </div>
+                ${admin.card ? 
+                    `<div class="admin-card"><span class="admin-card-label">群昵称:</span>${admin.card}</div>` : 
+                    '<div class="admin-card-empty">无群昵称</div>'
+                }
+            </div>
+            <div class="admin-role ${admin.role}">${admin.role === 'owner' ? '群  主' : '管理员'}</div>
+        </div>
+    `).join('');
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        ${fontBase64 ? `@font-face { font-family: 'CustomFont'; src: url('data:font/opentype;charset=utf-8;base64,${fontBase64}') format('opentype'); font-weight: normal; font-style: normal; font-display: swap; }` : ''}
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        html, body { margin: 0; padding: 0; width: 100%; height: auto; }
+        
+        body {
+            font-family: ${fontBase64 ? "'CustomFont'," : ''} -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+            width: 800px;
+            min-height: 100vh;
+            background: ${colors.background};
+            color: ${colors.textPrimary};
+            padding: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 720px;
+        }
+
+        .header {
+            background: ${colors.cardBackground};
+            border: 2px solid ${colors.border};
+            border-radius: 20px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 16px rgba(0,0,0,${isDarkMode ? '0.3' : '0.08'});
+        }
+
+        .group-info-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .group-avatar {
+            width: 90px;
+            height: 90px;
+            border-radius: 16px;
+            object-fit: cover;
+            border: 3px solid ${colors.primary};
+            box-shadow: 0 4px 12px rgba(0,0,0,${isDarkMode ? '0.3' : '0.1'});
+        }
+
+        .group-details {
+            flex: 1;
+        }
+
+        .group-name {
+            font-size: 26px;
+            font-weight: 700;
+            color: ${colors.textPrimary};
+            margin-bottom: 8px;
+        }
+
+        .group-meta {
+            font-size: 16px;
+            color: ${colors.textSecondary};
+            line-height: 1.6;
+        }
+
+        .group-meta-item {
+            display: inline-block;
+            margin-right: 16px;
+        }
+
+        .group-meta-label {
+            color: ${colors.textSecondary};
+        }
+
+        .group-meta-value {
+            color: ${colors.primary};
+            font-weight: 600;
+        }
+
+        .title {
+            font-size: 32px;
+            font-weight: 700;
+            color: ${colors.primary};
+            text-align: center;
+            padding-bottom: 16px;
+            border-bottom: 2px solid ${colors.border};
+        }
+
+        .title-count {
+            color: ${colors.accent};
+            font-size: 24px;
+        }
+
+        .admin-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .admin-item {
+            background: ${colors.cardBackground};
+            border: 2px solid ${colors.border};
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,${isDarkMode ? '0.2' : '0.05'});
+        }
+
+        .admin-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,${isDarkMode ? '0.4' : '0.12'});
+            border-color: ${colors.primary};
+        }
+
+        .admin-number {
+            font-size: 32px;
+            font-weight: 700;
+            color: ${colors.textSecondary};
+            font-family: 'Courier New', monospace;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .admin-avatar-wrapper {
+            position: relative;
+        }
+
+        .admin-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid ${colors.border};
+            transition: border-color 0.3s ease;
+        }
+
+        .admin-item:hover .admin-avatar {
+            border-color: ${colors.primary};
+        }
+
+        .admin-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .admin-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: ${colors.textPrimary};
+        }
+
+        .admin-id {
+            font-size: 14px;
+            color: ${colors.textSecondary};
+            font-family: 'Courier New', monospace;
+        }
+
+        .admin-id-label {
+            color: ${colors.textSecondary};
+            font-weight: 500;
+        }
+
+        .admin-id-value {
+            color: ${colors.primary};
+            font-weight: 600;
+        }
+
+        .admin-card {
+            font-size: 15px;
+            color: ${colors.textPrimary};
+            padding: 6px 12px;
+            background: ${colors.hover};
+            border-radius: 8px;
+            display: inline-block;
+        }
+
+        .admin-card-label {
+            color: ${colors.textSecondary};
+            font-weight: 500;
+            margin-right: 8px;
+        }
+
+        .admin-card-empty {
+            font-size: 14px;
+            color: ${colors.textSecondary};
+            font-style: italic;
+        }
+
+        .admin-role {
+            font-size: 16px;
+            font-weight: 700;
+            padding: 10px 20px;
+            border-radius: 12px;
+            text-align: center;
+            min-width: 90px;
+        }
+
+        .admin-role.owner {
+            background: ${colors.ownerBg};
+            color: ${colors.ownerText};
+            border: 2px solid ${colors.ownerText};
+        }
+
+        .admin-role.admin {
+            background: ${colors.adminBg};
+            color: ${colors.adminText};
+            border: 2px solid ${colors.adminText};
+        }
+
+        .timestamp {
+            position: fixed;
+            top: 8px;
+            left: 8px;
+            font-size: 12px;
+            color: ${colors.textSecondary};
+            opacity: 0.6;
+            font-family: 'Courier New', monospace;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="group-info-wrapper">
+                <img src="data:image/jpeg;base64,${groupAvatarBase64}" alt="群头像" class="group-avatar" />
+                <div class="group-details">
+                    <div class="group-name">${contextInfo.groupName || '未知群聊'}</div>
+                    <div class="group-meta">
+                        <span class="group-meta-item">
+                            <span class="group-meta-label">群号:</span>
+                            <span class="group-meta-value">${contextInfo.groupId}</span>
+                        </span>
+                        <span class="group-meta-item">
+                            <span class="group-meta-label">成员:</span>
+                            <span class="group-meta-value">${contextInfo.memberCount}/${contextInfo.maxMemberCount}</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="title">
+                群管理员列表 <span class="title-count">(${admins.length}人)</span>
+            </div>
+        </div>
+        
+        <div class="admin-list">
+            ${flatAdminListItems}
+        </div>
+    </div>
+    <div class="timestamp">${timestamp}</div>
+</body>
+</html>`;
+};
+
+// 主渲染函数
+
 // 主渲染函数
 export async function renderAdminList(
     ctx: Context,
@@ -359,6 +683,14 @@ export async function renderAdminList(
             );
         } else if (imageStyle === IMAGE_STYLES.LXGW_WENKAI) {
             htmlContent = await getLXGWWenKaiAdminListHtmlStr(
+                admins,
+                contextInfo,
+                groupAvatarBase64,
+                fontBase64,
+                enableDarkMode
+            );
+        } else if (imageStyle === IMAGE_STYLES.FLAT_MINIMAL) {
+            htmlContent = await getFlatMinimalAdminListHtmlStr(
                 admins,
                 contextInfo,
                 groupAvatarBase64,

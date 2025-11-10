@@ -18,9 +18,11 @@
 ### 查看git大文件
 ```shell
 git rev-list --objects --all | git cat-file --batch-check='%(objecttype) %(objectname) %(objectsize) %(rest)' | Where-Object { $_ -match '^blob' } | ForEach-Object { $parts = $_ -split ' ', 4; [PSCustomObject]@{ Size = [int]$parts[2]; Name = $parts[3] } } | Sort-Object Size -Descending | Select-Object -First 20 
+
+git rev-list --objects --all | git cat-file --batch-check='%(objecttype) %(objectname) %(objectsize) %(rest)' | Where-Object { $_ -match '^blob' } | ForEach-Object { $parts = $_ -split ' ', 4; [PSCustomObject]@{ Size = [int]$parts[2]; File = $parts[3] } } | Sort-Object Size -Descending | Select-Object -First 20 | ForEach-Object { "{0,10} KB  {1}" -f ([math]::Round($_.Size/1KB, 2)), $_.File }
 ```
 
-### 发布到gitworkflow
+### 发布到git workflow
 #### 开发环境：
 ```shell
 cd G:\GGames\Minecraft\shuyeyun\qq-bot\koishi-dev\koishi-dev-3\external\onebot-info-image
@@ -39,7 +41,7 @@ yarn && yarn build
 yarn
 ```
 
-
+### 发布到npm workflow
 ```shell
 # ensure plugin dir name is *onebot-info-image*, without koishi-plugin prefix then:
 cd G:\GGames\Minecraft\shuyeyun\qq-bot\koishi-dev\koishi-dev-3
@@ -53,7 +55,7 @@ Invoke-WebRequest -Uri "https://www.google.com" -Method Head -UseBasicParsing
 npm login --registry https://registry.npmjs.org
 # login npm in browser
 npm run pub onebot-info-image -- --registry https://registry.npmjs.org
-npm dist-tag add koishi-plugin-onebot-info-image@0.2.0-alpha.10+20250929 latest --registry https://registry.npmjs.org
+npm dist-tag add koishi-plugin-onebot-info-image@0.2.0-alpha.11+20251013 latest --registry https://registry.npmjs.org
 
 npm view koishi-plugin-onebot-info-image
 npm-stat.com
